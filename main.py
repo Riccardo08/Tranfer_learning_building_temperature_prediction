@@ -1,40 +1,30 @@
 from __future__ import print_function, division
 import torch
-import torch.nn as nn # All neural network models, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
-import torch.optim as optim # For all optimization algoritms, SGD, Adam, etc.
-from torch.optim import lr_scheduler # To change (update) the learning rate.
-import torch.nn.functional as F # All functions that don't have any parameters.
+import torch.nn as nn                   # All neural network models, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
+import torch.optim as optim             # For all optimization algoritms, SGD, Adam, etc.
+from torch.optim import lr_scheduler    # To change (update) the learning rate.
+import torch.nn.functional as F         # All functions that don't have any parameters.
 import numpy as np
 import torchvision
-from torchvision import datasets # Has standard datasets that we can import in a nice way.
+from torchvision import datasets        # Has standard datasets that we can import in a nice way.
 from torchvision import models
-from torchvision import transforms # Transormations we can perform on our datasets.
+from torchvision import transforms      # Transormations we can perform on our datasets.
+from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 import time
 import os
 import copy
-
-plt.ion()   # interactive mode
-
-
 import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib
 from datetime import datetime as dt
-import os
-import numpy as np
 import matplotlib.gridspec as gridspec
 from pandas import DataFrame
 from pandas import concat
-import torch
-import torch.nn as nn
-from torch import nn
 from numpy import vstack
 from pandas import read_csv
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data import random_split
 from torch import Tensor
 from torch.nn import Linear
@@ -43,16 +33,16 @@ from torch.nn import Sigmoid
 from torch.nn import Module
 from torch.optim import SGD
 from torch.nn import BCELoss
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-torch.set_grad_enabled(True)
+# torch.set_grad_enabled(True)
 from sklearn import preprocessing
 from sklearn.metrics import accuracy_score
 from matplotlib import cm
 import seaborn as sns
 from torch.autograd import Variable
 from sklearn.metrics import mean_squared_error, r2_score
+
+
+plt.ion()   # interactive mode
 
 
 df = pd.read_csv('ASHRAE90.1_OfficeSmall_STD2016_NewYork.csv')
@@ -230,3 +220,159 @@ class MV_LSTM(torch.nn.Module):
         hidden = (hidden_state, cell_state) #HIDDEN is defined as a TUPLE
         return hidden
 
+
+# create NN
+#generalize the number of features and the number of timesteps by linking them to the preprocessing
+n_features = train_mX.shape[2]
+n_timesteps = lookback
+
+#initialize the network,criterion and optimizer
+mv_net = MV_LSTM(n_features, n_timesteps)
+criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
+optimizer = torch.optim.Adam(mv_net.parameters(), lr=lr)
+
+#initialize the training loss and the validation loss
+LOSS = []
+VAL_LOSS = []
+
+#START THE TRAINING PROCESS
+mv_net.train()
+
+for t in range(train_episodes):
+
+    h = mv_net.init_hidden(batch_size)  #hidden state is initialized at each epoch
+    loss = []
+    for x, label in train_dl:
+        h = mv_net.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+        h = tuple([each.data for each in h])
+        output, h = mv_net(x.float(), h)
+        label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
+        loss_c = criterion(output, label.float())
+        optimizer.zero_grad()
+        loss_c.backward()
+        optimizer.step()
+        loss.append(loss_c.item())
+    LOSS.append(np.sum(loss) /batch_size)
+    # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+
+
+    # VALIDATION LOOP
+    val_loss =[]
+    h = mv_net.init_hidden(batch_size)
+    for inputs, labels in val_dl:
+        h = tuple([each.data for each in h])
+        val_output, h = mv_net(inputs.float(), h)
+        val_labels = labels.unsqueeze(1)
+        val_loss_c = criterion(val_output, val_labels.float())
+    # VAL_LOSS.append(val_loss.item())
+        val_loss.append(val_loss_c.item())
+    VAL_LOSS.append(np.sum(val_loss) /batch_size)
+    print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+    #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
+
+
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+plt.xticks(np.arange(0, 10, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+plt.show()
+
+
+#TODO: =============FINE-TUNING___or____FEATURE EXTRACTION======================================
+
+
+
+#=========================================================================================
+#1h PREDICTION TESTING
+test_data = TensorDataset(test_mX, test_mY)
+test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
+test_losses = []
+h = mv_net.init_hidden(batch_size)
+
+
+mv_net.eval()
+ypred=[]
+ylab=[]
+for inputs, labels in test_dl:
+    h = tuple([each.data for each in h])
+    test_output, h = mv_net(inputs.float(), h)
+    labels = labels.unsqueeze(1)
+    test_output = test_output.detach().numpy()
+    #RESCALE OUTPUT
+    test_output = np.reshape(test_output, (-1, 1))
+    test_output = minT + test_output*(maxT-minT)
+
+    # labels = labels.item()
+    labels = labels.detach().numpy()
+    labels = np.reshape(labels, (-1, 1))
+    #RESCALE LABELS
+    labels = minT + labels*(maxT-minT)
+    ypred.append(test_output)
+    ylab.append(labels)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+ypred = flatten(ypred)
+ylab = flatten(ylab)
+ypred = np.array(ypred, dtype=float)
+ylab = np.array(ylab, dtype = float)
+
+
+error = []
+error = ypred - ylab
+
+plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.4, 0.4, 0.1))
+plt.xlim(-0.4, 0.4)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini_LSTM/first_model_error.png')
+plt.show()
+
+
+plt.plot(ypred, color='orange', label="Predicted")
+plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=0,right=800)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/I_LSTM_real_VS_predicted_temperature(10_epochs).png')
+plt.show()
+
+
+#METRICS
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+MAPE = mean_absolute_percentage_error(ylab, ypred)
+RMSE=mean_squared_error(ylab,ypred)**0.5
+R2 = r2_score(ylab,ypred)
+
+print('MAPE:%0.5f%%'%MAPE)
+print('RMSE:', RMSE.item())
+print('R2:', R2.item())
+
+
+plt.scatter(ylab,ypred,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+# plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
+plt.show()
