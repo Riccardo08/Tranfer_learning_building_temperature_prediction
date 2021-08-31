@@ -163,6 +163,36 @@ print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
 
+class CNN(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size, pad=0):
+        super(CNN, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = kernel_size
+        self.pad = pad
+        self.conv1 = nn.Conv2d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(self.out_channel, 20, self.kernel_size)
+        self.fc1 = nn.Linear(20*self.kernel_size*self.kernel_size, 200)
+        self.fc2 = nn.Linear(200, 90)
+        self.fc3 = nn.Linear(90, 1)
+
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 20*self.kernel_size*self.kernel_size)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+
+
+
+
+
 #======================================== LSTM Structure ========================================#
 #HYPER PARAMETERS
 lookback = 48
