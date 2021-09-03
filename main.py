@@ -19,7 +19,6 @@ import matplotlib
 from datetime import datetime as dt
 import matplotlib.gridspec as gridspec
 from pandas import DataFrame
-from pandas import concat
 from numpy import vstack
 from pandas import read_csv
 from sklearn.preprocessing import LabelEncoder
@@ -32,6 +31,7 @@ from torch.nn import ReLU
 from torch.nn import Sigmoid
 from torch.nn import Module
 from torch.optim import SGD
+from torch.optim import Adam
 from torch.nn import BCELoss
 # torch.set_grad_enabled(True)
 from sklearn import preprocessing
@@ -141,7 +141,7 @@ test_m = test_m.to_numpy()
 
 
 # Split the x and y datasets
-#======================================================
+#=========================================================
 n_steps = 48
 train_mX, train_mY = split_sequences(train_m, n_steps=n_steps)
 val_mX, val_mY = split_sequences(val_m, n_steps=n_steps)
@@ -162,7 +162,8 @@ print(type(val_mY), val_mY.shape)
 print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
-
+"""
+#_____________________________2D-CNN______________________________
 class CNN(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size, pad=0):
         super(CNN, self).__init__()
@@ -171,9 +172,9 @@ class CNN(nn.Module):
         self.kernel_size = kernel_size
         self.pad = pad
         self.conv1 = nn.Conv2d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(self.out_channel, 20, self.kernel_size)
-        self.fc1 = nn.Linear(20*self.kernel_size*self.kernel_size, 200)
+        self.pool = nn.MaxPool1d(2)
+        self.conv2 = nn.Conv2d(self.out_channel, 1, self.kernel_size)
+        self.fc1 = nn.Linear(20*self.kernel_size*self.kernel_size, 200) # need to change the input (20).
         self.fc2 = nn.Linear(200, 90)
         self.fc3 = nn.Linear(90, 1)
 
@@ -181,11 +182,181 @@ class CNN(nn.Module):
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 20*self.kernel_size*self.kernel_size)
+        x = x.view(-1, 20*self.kernel_size*self.kernel_size) # need to change the input (20).
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+"""
+
+#_____________________________1D-CNN___________________________________
+class CNN(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super(CNN, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = 2
+        self.pad = 0
+        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad)
+        self.pool = nn.MaxPool1d(2)
+        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
+        self.fc1 = nn.Linear(66, 200) # need to change the input (20).
+        self.fc2 = nn.Linear(200, 90)
+        self.fc3 = nn.Linear(90, 1)
+
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 66) # need to change the input (20).
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+# Define model, criterion and optimizer:
+cnn_model = CNN(100,1)
+criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
+optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
+
+# Define parameters
+batch_size = 100
+epochs = 6
+
+# train_batch_size = 500
+train_data = TensorDataset(train_mX, train_mY)
+train_dl = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+# val_batch_size = 300
+val_data = TensorDataset(val_mX, val_mY)
+val_dl = DataLoader(val_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+test_data = TensorDataset(test_mX, test_mY)
+test_dl = DataLoader(test_data, batch_size= batch_size, drop_last=True)
+
+
+#initialize the training loss and the validation loss
+LOSS = []
+VAL_LOSS = []
+
+#START THE TRAINING PROCESS
+cnn_model.train()
+
+for t in range(epochs):
+    # h = cnn_model.init_hidden(batch_size)  #hidden state is initialized at each epoch
+    loss = []
+    for x, label in train_dl:
+        # h = cnn_model.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+        # h = tuple([each.data for each in h])
+        x = torch.reshape(x.float(), (6, 100, 48))
+        output = cnn_model(x)
+        label = label.unsqueeze(1)                      #utilizzo .unsqueeze per non avere problemi di dimensioni
+        loss_c = criterion(output, label.float())
+        optimizer.zero_grad()
+        loss_c.backward()
+        optimizer.step()
+        loss.append(loss_c.item())
+    LOSS.append(np.sum(loss)/batch_size)
+    #LOSS.append(loss)
+    # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+    # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+
+
+    # VALIDATION LOOP
+    val_loss =[]
+    # h = mv_net.init_hidden(batch_size)
+    for inputs, labels in val_dl:
+        # h = tuple([each.data for each in h])
+        inputs = torch.reshape(inputs.float(), (6, 100, 48))
+        val_output = cnn_model(inputs.float())
+        val_labels = labels.unsqueeze(1)
+        val_loss_c = criterion(val_output, val_labels.float())
+    # VAL_LOSS.append(val_loss.item())
+        val_loss.append(val_loss_c.item())
+    VAL_LOSS.append(np.sum(val_loss) /batch_size)
+    print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+    #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
+
+
+"""
+plt.plot(loss)
+plt.show()
+"""
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+# plt.xticks(np.arange(0, epochs, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+plt.show()
+
+
+
+
+#=========================================================================================
+#1h PREDICTION TESTING
+test_losses = []
+# h = cnn_model.init_hidden(batch_size)
+
+cnn_model.eval()
+ypred=[]
+ylab=[]
+for inputs, labels in test_dl:
+    # h = tuple([each.data for each in h])
+    inputs = torch.reshape(inputs.float(), (6, 100, 48))
+    test_output = cnn_model(inputs.float())
+    # labels = labels.unsqueeze(1)
+    test_output = test_output.detach().numpy()
+
+    #RESCALE OUTPUT
+    # test_output = np.reshape(test_output, (-1, 1))
+    test_output = minT + test_output*(maxT-minT)
+
+    # labels = labels.item()
+    # labels = labels.detach().numpy()
+    # labels = np.reshape(labels, (-1, 1))
+
+    #RESCALE LABELS
+    labels = minT + labels*(maxT-minT)
+    ypred.append(test_output)
+    ylab.append(labels)
+
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+ypred = flatten(ypred)
+ylab = flatten(ylab)
+ypred = np.array(ypred, dtype=float)
+ylab = np.array(ylab, dtype = float)
+
+
+error = []
+error = ypred - ylab
+
+plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.4, 0.4, 0.1))
+plt.xlim(-0.4, 0.4)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini_LSTM/first_model_error.png')
+plt.show()
+
+
+
+
+
+
+
+
+
+
 
 
 
