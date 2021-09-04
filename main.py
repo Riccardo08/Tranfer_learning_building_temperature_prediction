@@ -176,9 +176,16 @@ class CNN(nn.Module):
         self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
         self.pool = nn.MaxPool1d(2)
         self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        self.fc1 = nn.Linear(7100, 15) # need to change the input (20).
-        self.fc2 = nn.Linear(15, 8)
-        self.fc3 = nn.Linear(8, 1)
+        self.fc1 = nn.Linear(7100, 6000) # need to change the input (20).
+        self.fc2 = nn.Linear(6000, 4500)
+        self.fc3 = nn.Linear(4500, 2500)
+        self.fc4 = nn.Linear(2500, 1000)
+        self.fc5 = nn.Linear(1000, 700)
+        self.fc6 = nn.Linear(700, 150)
+        self.fc7 = nn.Linear(150, 80)
+        self.fc8 = nn.Linear(80, 20)
+        self.fc9 = nn.Linear(20, 1)
+
 
 
     def forward(self, x):
@@ -187,7 +194,13 @@ class CNN(nn.Module):
         x = x.view(-1, 7100)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc5(x))
+        x = F.relu(self.fc6(x))
+        x = F.relu(self.fc7(x))
+        x = F.relu(self.fc8(x))
+        x = self.fc9(x)
         return x
 
 # Define model, criterion and optimizer:
