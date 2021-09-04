@@ -197,25 +197,27 @@ class CNN(nn.Module):
         self.out_channel = out_channel
         self.kernel_size = 2
         self.pad = 0
-        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad)
+        self.dil = 1
+        self.str = 1
+        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
         self.pool = nn.MaxPool1d(2)
         self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        self.fc1 = nn.Linear(66, 200) # need to change the input (20).
-        self.fc2 = nn.Linear(200, 90)
-        self.fc3 = nn.Linear(90, 1)
+        self.fc1 = nn.Linear(7100, 15) # need to change the input (20).
+        self.fc2 = nn.Linear(15, 8)
+        self.fc3 = nn.Linear(8, 1)
 
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 66) # need to change the input (20).
+        x = x.view(-1, 7100)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
 
 # Define model, criterion and optimizer:
-cnn_model = CNN(100,1)
+cnn_model = CNN(1,4)
 criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
 optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
 
@@ -232,7 +234,7 @@ val_data = TensorDataset(val_mX, val_mY)
 val_dl = DataLoader(val_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
 test_data = TensorDataset(test_mX, test_mY)
-test_dl = DataLoader(test_data, batch_size= batch_size, drop_last=True)
+test_dl = DataLoader(test_data, batch_size=batch_size, drop_last=True)
 
 
 #initialize the training loss and the validation loss
@@ -248,9 +250,9 @@ for t in range(epochs):
     for x, label in train_dl:
         # h = cnn_model.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         # h = tuple([each.data for each in h])
-        x = torch.reshape(x.float(), (6, 100, 48))
+        x = torch.reshape(x.float(), (batch_size, 1 , x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
         output = cnn_model(x)
-        label = label.unsqueeze(1)                      #utilizzo .unsqueeze per non avere problemi di dimensioni
+        label = label.unsqueeze(1)
         loss_c = criterion(output, label.float())
         optimizer.zero_grad()
         loss_c.backward()
@@ -259,7 +261,7 @@ for t in range(epochs):
     LOSS.append(np.sum(loss)/batch_size)
     #LOSS.append(loss)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-    # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+    print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
 
 
     # VALIDATION LOOP
@@ -267,7 +269,7 @@ for t in range(epochs):
     # h = mv_net.init_hidden(batch_size)
     for inputs, labels in val_dl:
         # h = tuple([each.data for each in h])
-        inputs = torch.reshape(inputs.float(), (6, 100, 48))
+        inputs = torch.reshape(inputs.float(), (batch_size, 1, inputs.shape[1]*inputs.shape[2]))
         val_output = cnn_model(inputs.float())
         val_labels = labels.unsqueeze(1)
         val_loss_c = criterion(val_output, val_labels.float())
@@ -278,10 +280,6 @@ for t in range(epochs):
     #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
 
 
-"""
-plt.plot(loss)
-plt.show()
-"""
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
@@ -310,23 +308,43 @@ ypred=[]
 ylab=[]
 for inputs, labels in test_dl:
     # h = tuple([each.data for each in h])
-    inputs = torch.reshape(inputs.float(), (6, 100, 48))
+    inputs = torch.reshape(inputs.float(), (batch_size, 1, inputs.shape[1]*inputs.shape[2]))
     test_output = cnn_model(inputs.float())
-    # labels = labels.unsqueeze(1)
+    labels = labels.unsqueeze(1)
     test_output = test_output.detach().numpy()
 
     #RESCALE OUTPUT
-    # test_output = np.reshape(test_output, (-1, 1))
+    test_output = np.reshape(test_output, (-1, 1))
     test_output = minT + test_output*(maxT-minT)
 
-    # labels = labels.item()
-    # labels = labels.detach().numpy()
-    # labels = np.reshape(labels, (-1, 1))
+    labels = labels.detach().numpy()
+    labels = np.reshape(labels, (-1, 1))
 
     #RESCALE LABELS
     labels = minT + labels*(maxT-minT)
     ypred.append(test_output)
     ylab.append(labels)
+
+
+
+
+test_losses = []
+cnn_model.eval()
+ypred=[]
+ylab=[]
+
+for inputs, labels in test_dl:
+    inputs = torch.reshape(inputs, (100, 1, 288))
+    outputs = cnn_model(inputs.float())
+    outputs = torch.reshape(outputs, (-1, 1))
+    outputs = minT + test_output*(maxT-minT)
+
+    labs = labels.float()
+    labs = torch.reshape(labs, (-1, 1))
+    labs = minT + labs*(maxT-minT)
+
+    ypred.append(outputs)
+    ylab.append(labs)
 
 
 flatten = lambda l: [item for sublist in l for item in sublist]
@@ -339,6 +357,7 @@ ylab = np.array(ylab, dtype = float)
 error = []
 error = ypred - ylab
 
+# Plot the error
 plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-0.4, 0.4, 0.1))
 plt.xlim(-0.4, 0.4)
@@ -351,7 +370,60 @@ plt.show()
 
 
 
+"""
+#TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
+print('FINE-TUNING')
+model_ft = models.resnet18(pretrained=True) # optimize weights
+print(model_ft)
+num_ftrs = cnn_model.fc.in_features # change the last fully connected layer
+# Here the size of each output sample is set to 2.
+# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
+model_ft.fc = nn.Linear(num_ftrs, 2)
 
+model_ft = model_ft.to(device)
+
+criterion = nn.CrossEntropyLoss()
+
+# Observe that all parameters are being optimized
+optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+
+#TODO:Train and evaluate
+model_ft, fine_tuning_acc = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=25)
+
+visualize_model(model_ft)
+
+
+
+#TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze all the network except the final layer. We need to
+# set requires_grad == False to freeze the parameters so that the gradients are not computed in backward() ) -------- only parameters of the last layera are updated
+print('FIXED FEATURES EXTRACTOR')
+model_conv = torchvision.models.resnet18(pretrained=True)
+print(model_conv)
+for param in model_conv.parameters():
+    param.requires_grad = False #freeze all the layers in the beginning and then we set a new last fully connected layer
+
+# Parameters of newly constructed modules have requires_grad=True by default
+num_ftrs = model_conv.fc.in_features
+model_conv.fc = nn.Linear(num_ftrs, 2) #set the inlet features of the fc layer; the outputs are 2 (2 classes)
+
+model_conv = model_conv.to(device)
+
+criterion = nn.CrossEntropyLoss()
+
+# Observe that only parameters of final layer are being optimized as opposed to before.
+optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
+
+# Decay LR by a factor of 0.1 every 7 epochs
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+
+#TODO: Train and evaluate
+model_conv, feature_extractor_acc = train_model(model_conv, criterion, optimizer_conv, exp_lr_scheduler, num_epochs=25)
+
+visualize_model(model_conv)
 
 
 
@@ -577,3 +649,5 @@ plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
 # plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
 plt.show()
+"""
+
