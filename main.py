@@ -148,12 +148,12 @@ val_mX, val_mY = split_sequences(val_m, n_steps=n_steps)
 test_mX, test_mY = split_sequences(test_m, n_steps=n_steps)
 
 # Convert to tensors
-train_mX=torch.from_numpy(train_mX)
-train_mY=torch.from_numpy(train_mY)
-val_mX=torch.from_numpy(val_mX)
-val_mY=torch.from_numpy(val_mY)
-test_mX=torch.from_numpy(test_mX)
-test_mY=torch.from_numpy(test_mY)
+train_mX = torch.from_numpy(train_mX)
+train_mY = torch.from_numpy(train_mY)
+val_mX = torch.from_numpy(val_mX)
+val_mY = torch.from_numpy(val_mY)
+test_mX = torch.from_numpy(test_mX)
+test_mY = torch.from_numpy(test_mY)
 
 print(type(train_mX), train_mX.shape)
 print(type(train_mY), train_mY.shape)
@@ -248,7 +248,7 @@ for t in range(epochs):
     # h = cnn_model.init_hidden(batch_size)  #hidden state is initialized at each epoch
     loss = []
     for x, label in train_dl:
-        # h = cnn_model.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+        # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         # h = tuple([each.data for each in h])
         x = torch.reshape(x.float(), (batch_size, 1 , x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
         output = cnn_model(x)
@@ -261,7 +261,7 @@ for t in range(epochs):
     LOSS.append(np.sum(loss)/batch_size)
     #LOSS.append(loss)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-    print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+    # rint('Epoch : ', t, 'Training Loss : ', LOSS[-1])
 
 
     # VALIDATION LOOP
@@ -277,7 +277,6 @@ for t in range(epochs):
         val_loss.append(val_loss_c.item())
     VAL_LOSS.append(np.sum(val_loss) /batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-    #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
 
 
 
@@ -300,6 +299,7 @@ plt.show()
 
 #=========================================================================================
 #1h PREDICTION TESTING
+"""
 test_losses = []
 # h = cnn_model.init_hidden(batch_size)
 
@@ -324,23 +324,27 @@ for inputs, labels in test_dl:
     labels = minT + labels*(maxT-minT)
     ypred.append(test_output)
     ylab.append(labels)
+"""
 
 
-
+#___________________________TESTING_PHASE________________________________________
+cnn_model.eval()
 
 test_losses = []
-cnn_model.eval()
 ypred=[]
 ylab=[]
 
 for inputs, labels in test_dl:
     inputs = torch.reshape(inputs, (100, 1, 288))
     outputs = cnn_model(inputs.float())
-    outputs = torch.reshape(outputs, (-1, 1))
-    outputs = minT + test_output*(maxT-minT)
+    outputs = outputs.detach().numpy()
+    outputs = np.reshape(outputs, (-1, 1))
+    outputs = minT + outputs*(maxT-minT)
 
-    labs = labels.float()
-    labs = torch.reshape(labs, (-1, 1))
+    labs = labels.unsqueeze(1)
+    labs = labs.float()
+    labels = labs.detach().numpy()
+    labs = np.reshape(labs, (-1, 1))
     labs = minT + labs*(maxT-minT)
 
     ypred.append(outputs)
@@ -351,14 +355,17 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 ypred = flatten(ypred)
 ylab = flatten(ylab)
 ypred = np.array(ypred, dtype=float)
-ylab = np.array(ylab, dtype = float)
+ylab = np.array(ylab, dtype=float)
+ypred = np.reshape(ypred, (-1, 1))
+ylab = np.reshape(ylab, (-1, 1))
+
 
 
 error = []
 error = ypred - ylab
 
 # Plot the error
-plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
+plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-0.4, 0.4, 0.1))
 plt.xlim(-0.4, 0.4)
 plt.title('First model prediction error')
@@ -367,10 +374,19 @@ plt.grid(True)
 # plt.savefig('immagini_LSTM/first_model_error.png')
 plt.show()
 
+#________VERIFICA: ylab == test_mY
+test_mY_prova = test_mY.numpy()
+for x in range(0, len(test_mY_prova)):
+    test_mY_prova[x] = minT + test_mY_prova[x]*(maxT - minT)
+test_mY_prova = np.reshape(test_mY_prova, (-1, 1))
+test_mY_prova = test_mY_prova[:10400]
+for x in range(0, len(test_mY_prova)):
 
 
 
-"""
+
+
+
 #TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
 print('FINE-TUNING')
 model_ft = models.resnet18(pretrained=True) # optimize weights
@@ -435,7 +451,7 @@ visualize_model(model_conv)
 
 
 
-
+"""
 #======================================== LSTM Structure ========================================#
 #HYPER PARAMETERS
 lookback = 48
