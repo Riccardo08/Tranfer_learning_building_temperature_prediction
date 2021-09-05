@@ -315,7 +315,7 @@ plt.show()
 
 
 
-#_____________________________________SAVE_THE_MODEL_______________________________________
+#_____________________________________SAVE_THE_MODEL_____________________________
 torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
 loadedmodel = CNN(1, 4)
 loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
@@ -323,7 +323,6 @@ loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 
 
 #___________________________TESTING_PHASE________________________________________
-
 # loadedmodel.eval()
 cnn_model.eval()
 test_losses = []
@@ -400,7 +399,7 @@ plt.legend()
 plt.show()
 
 
-#METRICS
+#______________________________METRICS_EVALUATION___________________________________________________
 def mean_absolute_percentage_error(y_true, y_pred):
     y_true, y_pred = np.array(y_true), np.array(y_pred)
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
