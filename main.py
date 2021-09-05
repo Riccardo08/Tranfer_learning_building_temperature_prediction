@@ -210,7 +210,7 @@ optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
 
 # Define parameters
 batch_size = 100
-epochs = 40
+epochs = 10
 
 # train_batch_size = 500
 train_data = TensorDataset(train_mX, train_mY)
@@ -248,7 +248,7 @@ for t in range(epochs):
     LOSS.append(np.sum(loss)/batch_size)
     #LOSS.append(loss)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-    # rint('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+    # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
 
 
     # VALIDATION LOOP
@@ -283,9 +283,14 @@ plt.show()
 
 
 
-#___________________________TESTING_PHASE________________________________________
-cnn_model.eval()
+#_____________________________________SAVE_THE_MODEL_______________________________________
+torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
+loadedmodel = CNN(1, 4)
+loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 
+#___________________________TESTING_PHASE________________________________________
+
+loadedmodel.eval()
 test_losses = []
 ypred=[]
 ylab=[]
@@ -293,14 +298,14 @@ ylab=[]
 for inputs, labels in test_dl:
     inputs = torch.reshape(inputs, (100, 1, 288))
     outputs = cnn_model(inputs.float())
-    outputs = outputs.detach().numpy()
-    outputs = np.reshape(outputs, (-1, 1))
+    #outputs = outputs.detach().numpy()
+    #outputs = np.reshape(outputs, (-1, 1))
     outputs = minT + outputs*(maxT-minT)
 
     labs = labels.unsqueeze(1)
-    labs = labs.float()
-    labels = labs.detach().numpy()
-    labs = np.reshape(labs, (-1, 1))
+    # labs = labs.float()
+    #labels = labs.detach().numpy()
+    #labs = np.reshape(labs, (-1, 1))
     labs = minT + labs*(maxT-minT)
 
     ypred.append(outputs)
@@ -328,7 +333,7 @@ test_mY_prova = np.reshape(test_mY_prova, (-1, 1))
 test_mY_prova = test_mY_prova[:10400]
 
 n=0
-for x in range(0, len(test_mY_prova)): #--------> n rimane = 0 => i die vettori sono gli stessi
+for x in range(0, len(test_mY_prova)):      #--------> n rimane = 0 => i die vettori sono gli stessi
     if test_mY_prova[x]==test_mY[x]:
         n += 1
 
@@ -356,7 +361,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('immagini_LSTM/final_LSTM_real_VS_predicted_temperature(10_neurons).png')
+# plt.savefig('immagini_LSTM/final_LSTM_real_VS_predicted_temperature(10_neurons).png')
 plt.show()
 
 
@@ -367,7 +372,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 MAPE = mean_absolute_percentage_error(ylab, ypred)
 RMSE=mean_squared_error(ylab,ypred)**0.5
-R2 = r2_score(ylab,ypred)
+R2 = r2_score(ylab, ypred)
 
 print('MAPE:%0.5f%%'%MAPE)
 print('RMSE:%0.5f'%RMSE.item())
@@ -380,8 +385,9 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('immagini_LSTM/final_LSTM_prediction_distribution(10_neurons).png')
+# plt.savefig('immagini_LSTM/final_LSTM_prediction_distribution(10_neurons).png')
 plt.show()
+
 
 
 
@@ -389,9 +395,9 @@ plt.show()
 
 #TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
 print('FINE-TUNING')
-model_ft = models.resnet18(pretrained=True) # optimize weights
+model_ft = loadedmodel(pretrained=True) # optimize weights
 print(model_ft)
-num_ftrs = cnn_model.fc.in_features # change the last fully connected layer
+num_ftrs = model_ft.fc.in_features # change the last fully connected layer
 # Here the size of each output sample is set to 2.
 # Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
 model_ft.fc = nn.Linear(num_ftrs, 2)
@@ -408,23 +414,23 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 
 #TODO:Train and evaluate
-model_ft, fine_tuning_acc = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=25)
+model_ft, fine_tuning_acc = loadedmodel() #insert the arguments of the model
 
-visualize_model(model_ft)
+# visualize_model(model_ft)
 
 
 
 #TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze all the network except the final layer. We need to
 # set requires_grad == False to freeze the parameters so that the gradients are not computed in backward() ) -------- only parameters of the last layera are updated
 print('FIXED FEATURES EXTRACTOR')
-model_conv = torchvision.models.resnet18(pretrained=True)
+model_conv = loadedmodel(pretrained=True)
 print(model_conv)
 for param in model_conv.parameters():
-    param.requires_grad = False #freeze all the layers in the beginning and then we set a new last fully connected layer
+    param.requires_grad = False         #freeze all the layers in the beginning and then we set a new last fully connected layer
 
 # Parameters of newly constructed modules have requires_grad=True by default
 num_ftrs = model_conv.fc.in_features
-model_conv.fc = nn.Linear(num_ftrs, 2) #set the inlet features of the fc layer; the outputs are 2 (2 classes)
+model_conv.fc = nn.Linear(num_ftrs, 2)  #set the inlet features of the fc layer; the outputs are 2 (2 classes)
 
 model_conv = model_conv.to(device)
 
@@ -437,9 +443,9 @@ optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
 #TODO: Train and evaluate
-model_conv, feature_extractor_acc = train_model(model_conv, criterion, optimizer_conv, exp_lr_scheduler, num_epochs=25)
+model_conv, feature_extractor_acc = loadedmodel() #insert the arguments of the model
 
-visualize_model(model_conv)
+# visualize_model(model_conv)
 
 
 
