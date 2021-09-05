@@ -98,7 +98,7 @@ col_names = ['Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)',
 multi_data = (df[col_names]-df[col_names].min())/(df[col_names].max()-df[col_names].min())
 multi_norm = multi_data
 
-# Normalization
+#_____________________________________________Normalization____________________________________
 l_train = int(0.8 * len(df))
 l_train_m = int(0.8 * l_train)# training length
 # l_val_m = int(0.2*l_train)# validation length
@@ -140,8 +140,8 @@ val_m = val_m.to_numpy()
 test_m = test_m.to_numpy()
 
 
-# Split the x and y datasets
-#=========================================================
+
+#_____________________________________Split_the_x_and_y_datasets________________________
 n_steps = 48
 train_mX, train_mY = split_sequences(train_m, n_steps=n_steps)
 val_mX, val_mY = split_sequences(val_m, n_steps=n_steps)
@@ -317,7 +317,7 @@ plt.show()
 
 #_____________________________________SAVE_THE_MODEL_____________________________
 torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
-loadedmodel = CNN(1, 4)
+loadedmodel = CNN(1, 2)
 loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 
 
