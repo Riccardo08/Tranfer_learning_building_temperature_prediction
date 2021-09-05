@@ -163,7 +163,7 @@ print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
 
-#_____________________________1D-CNN___________________________________
+#_____________________________1D-CNN_(SLOW)___________________________________
 class CNN(nn.Module):
     def __init__(self, in_channel, out_channel):
         super(CNN, self).__init__()
@@ -203,8 +203,38 @@ class CNN(nn.Module):
         x = self.fc9(x)
         return x
 
+
+
+#_____________________________1D-CNN_(FAST)___________________________________
+class CNN(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super(CNN, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = 2
+        self.pad = 0
+        self.dil = 1
+        self.str = 1
+        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
+        self.pool = nn.MaxPool1d(2)
+        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
+        self.fc1 = nn.Linear(7100, 2500) # need to change the input (20).
+        self.fc2 = nn.Linear(2500, 500)
+        self.fc3 = nn.Linear(500, 1)
+
+
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 7100)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
 # Define model, criterion and optimizer:
-cnn_model = CNN(1,4)
+cnn_model = CNN(1,2)
 criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
 optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
 
@@ -227,6 +257,7 @@ test_dl = DataLoader(test_data, batch_size=batch_size, drop_last=True)
 #initialize the training loss and the validation loss
 LOSS = []
 VAL_LOSS = []
+val_output_list = []
 
 #START THE TRAINING PROCESS
 cnn_model.train()
@@ -260,8 +291,9 @@ for t in range(epochs):
         val_output = cnn_model(inputs.float())
         val_labels = labels.unsqueeze(1)
         val_loss_c = criterion(val_output, val_labels.float())
-    # VAL_LOSS.append(val_loss.item())
+        # VAL_LOSS.append(val_loss.item())
         val_loss.append(val_loss_c.item())
+        val_output_list.append(val_output)
     VAL_LOSS.append(np.sum(val_loss) /batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
 
@@ -288,15 +320,18 @@ torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
 loadedmodel = CNN(1, 4)
 loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 
+
+
 #___________________________TESTING_PHASE________________________________________
 
-loadedmodel.eval()
+# loadedmodel.eval()
+cnn_model.eval()
 test_losses = []
 ypred=[]
 ylab=[]
 
 for inputs, labels in test_dl:
-    inputs = torch.reshape(inputs, (100, 1, 288))
+    inputs = torch.reshape(inputs, (batch_size, 1, inputs.shape[1]*inputs.shape[2]))
     outputs = cnn_model(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
@@ -324,7 +359,7 @@ error = []
 error = ypred - ylab
 
 
-#________________________________VERIFICA: ylab == test_mY_____________________________________
+#________________________________VERIFICA: ylab == test_mY_____________________________________________
 test_mY_prova = test_mY.numpy()
 for x in range(0, len(test_mY_prova)):
     test_mY_prova[x] = minT + test_mY_prova[x]*(maxT - minT)
@@ -333,11 +368,11 @@ test_mY_prova = np.reshape(test_mY_prova, (-1, 1))
 test_mY_prova = test_mY_prova[:10400]
 
 n=0
-for x in range(0, len(test_mY_prova)):      #--------> n rimane = 0 => i die vettori sono gli stessi
+for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die vettori sono gli stessi
     if test_mY_prova[x]==test_mY[x]:
         n += 1
 
-#______________________________________________________________________________________________
+#______________________________________________________________________________________________________
 
 
 # Plot the error
