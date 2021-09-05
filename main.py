@@ -210,7 +210,7 @@ optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
 
 # Define parameters
 batch_size = 100
-epochs = 10
+epochs = 3
 
 # train_batch_size = 500
 train_data = TensorDataset(train_mX, train_mY)
