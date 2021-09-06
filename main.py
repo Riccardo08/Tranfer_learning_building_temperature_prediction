@@ -162,7 +162,7 @@ print(type(val_mY), val_mY.shape)
 print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
-
+"""
 #_____________________________1D-CNN_(SLOW)___________________________________
 class CNN(nn.Module):
     def __init__(self, in_channel, out_channel):
@@ -202,7 +202,7 @@ class CNN(nn.Module):
         x = F.relu(self.fc8(x))
         x = self.fc9(x)
         return x
-
+"""
 
 
 #_____________________________1D-CNN_(FAST)___________________________________
@@ -218,19 +218,21 @@ class CNN(nn.Module):
         self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
         self.pool = nn.MaxPool1d(2)
         self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        self.fc1 = nn.Linear(7100, 2500) # need to change the input (20).
-        self.fc2 = nn.Linear(2500, 500)
-        self.fc3 = nn.Linear(500, 1)
+        self.fc1 = nn.Linear(71, 50) # need to change the input (20).
+        self.fc2 = nn.Linear(50, 20)
+        self.fc3 = nn.Linear(20, 10)
+        self.fc4 = nn.Linear(10, 1)
 
 
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 7100)
+        x = x.view(-1, 71)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
         return x
 
 # Define model, criterion and optimizer:
@@ -240,7 +242,7 @@ optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
 
 # Define parameters
 batch_size = 100
-epochs = 3
+epochs = 35
 
 # train_batch_size = 500
 train_data = TensorDataset(train_mX, train_mY)
@@ -258,6 +260,7 @@ test_dl = DataLoader(test_data, batch_size=batch_size, drop_last=True)
 LOSS = []
 VAL_LOSS = []
 val_output_list = []
+val_labels_list = []
 
 #START THE TRAINING PROCESS
 cnn_model.train()
@@ -294,10 +297,23 @@ for t in range(epochs):
         # VAL_LOSS.append(val_loss.item())
         val_loss.append(val_loss_c.item())
         val_output_list.append(val_output)
+        val_labels_list.append(val_labels)
     VAL_LOSS.append(np.sum(val_loss) /batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
 
 
+flatten = lambda l: [item for sublist in l for item in sublist]
+val_output_list = flatten(val_output_list)
+val_labels_list = flatten(val_labels_list)
+val_output_list = np.array(val_output_list, dtype=float)
+val_labels_list = np.array(val_labels_list, dtype=float)
+
+
+val_output_list = np.reshape(val_output_list, (-1, 1))
+val_labels_list = np.reshape(val_labels_list, (-1, 1))
+
+# x = torch.rand(100, 1, 288)
+# print(cnn_model(x).shape)
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
@@ -357,7 +373,7 @@ ylab = np.reshape(ylab, (-1, 1))
 error = []
 error = ypred - ylab
 
-
+"""
 #________________________________VERIFICA: ylab == test_mY_____________________________________________
 test_mY_prova = test_mY.numpy()
 for x in range(0, len(test_mY_prova)):
@@ -372,7 +388,7 @@ for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die ve
         n += 1
 
 #______________________________________________________________________________________________________
-
+"""
 
 # Plot the error
 plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
