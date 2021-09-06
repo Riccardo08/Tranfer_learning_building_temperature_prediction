@@ -217,8 +217,9 @@ class CNN(nn.Module):
         self.str = 1
         self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
         self.pool = nn.MaxPool1d(2)
-        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        self.fc1 = nn.Linear(71, 50) # need to change the input (20).
+        self.conv2 = nn.Conv1d(self.out_channel, 2, self.kernel_size)
+        self.conv3 = nn.Conv1d(2, 1, self.kernel_size)
+        self.fc1 = nn.Linear(7000, 50) # need to change the input (20).
         self.fc2 = nn.Linear(50, 20)
         self.fc3 = nn.Linear(20, 10)
         self.fc4 = nn.Linear(10, 1)
@@ -228,7 +229,8 @@ class CNN(nn.Module):
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 71)
+        x = self.pool(F.relu(self.conv3(x)))
+        x = x.view(-1, 7000)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -236,13 +238,13 @@ class CNN(nn.Module):
         return x
 
 # Define model, criterion and optimizer:
-cnn_model = CNN(1,2)
+cnn_model = CNN(1,4)
 criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
-optimizer = torch.optim.Adam(cnn_model.parameters(), lr=0.001)
+optimizer = torch.optim.SGD(cnn_model.parameters(), lr=0.008)
 
 # Define parameters
-batch_size = 100
-epochs = 35
+batch_size = 200
+epochs = 50
 
 # train_batch_size = 500
 train_data = TensorDataset(train_mX, train_mY)
@@ -301,17 +303,15 @@ for t in range(epochs):
     VAL_LOSS.append(np.sum(val_loss) /batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
 
-
+"""
 flatten = lambda l: [item for sublist in l for item in sublist]
 val_output_list = flatten(val_output_list)
 val_labels_list = flatten(val_labels_list)
 val_output_list = np.array(val_output_list, dtype=float)
 val_labels_list = np.array(val_labels_list, dtype=float)
-
-
 val_output_list = np.reshape(val_output_list, (-1, 1))
 val_labels_list = np.reshape(val_labels_list, (-1, 1))
-
+"""
 # x = torch.rand(100, 1, 288)
 # print(cnn_model(x).shape)
 
@@ -332,10 +332,11 @@ plt.show()
 
 
 #_____________________________________SAVE_THE_MODEL_____________________________
+"""
 torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
 loadedmodel = CNN(1, 2)
 loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
-
+"""
 
 
 #___________________________TESTING_PHASE________________________________________
@@ -392,8 +393,8 @@ for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die ve
 
 # Plot the error
 plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
-plt.xticks(np.arange(-0.4, 0.4, 0.1))
-plt.xlim(-0.4, 0.4)
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
@@ -406,7 +407,7 @@ plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0,right=360)
+plt.xlim(left=360,right=800)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
@@ -424,9 +425,9 @@ MAPE = mean_absolute_percentage_error(ylab, ypred)
 RMSE=mean_squared_error(ylab,ypred)**0.5
 R2 = r2_score(ylab, ypred)
 
-print('MAPE:%0.5f%%'%MAPE)
-print('RMSE:%0.5f'%RMSE.item())
-print('R2:%0.5f'%R2.item())
+print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
+print('RMSE:%0.5f'%RMSE.item()) # RMSE values between 0.2 and 0.5 shows that the model can relatively predict the data accurately.
+print('R2:%0.5f'%R2.item())     # R-squared more than 0.75 is a very good value for showing the accuracy.
 
 plt.scatter(ylab,ypred,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
@@ -442,7 +443,7 @@ plt.show()
 
 
 
-
+"""
 #TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
 print('FINE-TUNING')
 model_ft = loadedmodel(pretrained=True) # optimize weights
@@ -496,6 +497,7 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 model_conv, feature_extractor_acc = loadedmodel() #insert the arguments of the model
 
 # visualize_model(model_conv)
+"""
 
 
 
