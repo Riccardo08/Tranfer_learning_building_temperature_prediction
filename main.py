@@ -242,7 +242,7 @@ class CNN(nn.Module):
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 350
+epochs = 200
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
