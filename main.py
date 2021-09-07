@@ -216,46 +216,54 @@ class CNN(nn.Module):
         self.dil = 1
         self.str = 1
         self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
-        self.pool = nn.MaxPool1d(2)
-        self.conv2 = nn.Conv1d(self.out_channel, 2, self.kernel_size)
-        self.conv3 = nn.Conv1d(2, 1, self.kernel_size)
-        self.fc1 = nn.Linear(7000, 50) # need to change the input (20).
-        self.fc2 = nn.Linear(50, 20)
-        self.fc3 = nn.Linear(20, 10)
-        self.fc4 = nn.Linear(10, 1)
+        self.pool1 = nn.MaxPool1d(2)
+        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
+        #self.pool2 = nn.MaxPool1d(2)
+        # self.conv3 = nn.Conv1d(1, 1, self.kernel_size)
+        self.fc1 = nn.Linear(71, 60) # need to change the input (20).
+        self.fc2 = nn.Linear(60, 40)
+        self.fc3 = nn.Linear(40, 20)
+        self.fc4 = nn.Linear(20, 1)
 
 
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = x.view(-1, 7000)
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool1(F.relu(self.conv2(x)))
+        #x = self.pool2(F.relu(self.conv3(x)))
+        x = x.view(-1, 71)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         x = self.fc4(x)
         return x
 
+
+
+
+#____________________________Define_PARAMETERS______________________________________________
+epochs = 350
+learning_rate = 0.009
+# batch_size = 100
+train_batch_size = 500
+val_batch_size = 200
+test_batch_size = 300
+
+
 # Define model, criterion and optimizer:
-cnn_model = CNN(1,4)
+cnn_model = CNN(1, 2)
 criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
-optimizer = torch.optim.SGD(cnn_model.parameters(), lr=0.008)
+optimizer = torch.optim.SGD(cnn_model.parameters(), lr=learning_rate)
 
-# Define parameters
-batch_size = 200
-epochs = 50
-
-# train_batch_size = 500
+# Dataloaders:
 train_data = TensorDataset(train_mX, train_mY)
-train_dl = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
+train_dl = DataLoader(train_data, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-# val_batch_size = 300
 val_data = TensorDataset(val_mX, val_mY)
-val_dl = DataLoader(val_data, batch_size=batch_size, shuffle=True, drop_last=True)
+val_dl = DataLoader(val_data, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
 test_data = TensorDataset(test_mX, test_mY)
-test_dl = DataLoader(test_data, batch_size=batch_size, drop_last=True)
+test_dl = DataLoader(test_data, batch_size=test_batch_size, drop_last=True)
 
 
 #initialize the training loss and the validation loss
@@ -263,6 +271,7 @@ LOSS = []
 VAL_LOSS = []
 val_output_list = []
 val_labels_list = []
+
 
 #START THE TRAINING PROCESS
 cnn_model.train()
@@ -273,7 +282,7 @@ for t in range(epochs):
     for x, label in train_dl:
         # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         # h = tuple([each.data for each in h])
-        x = torch.reshape(x.float(), (batch_size, 1 , x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
+        x = torch.reshape(x.float(), (train_batch_size, 1, x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
         output = cnn_model(x)
         label = label.unsqueeze(1)
         loss_c = criterion(output, label.float())
@@ -281,7 +290,7 @@ for t in range(epochs):
         loss_c.backward()
         optimizer.step()
         loss.append(loss_c.item())
-    LOSS.append(np.sum(loss)/batch_size)
+    LOSS.append(np.sum(loss)/train_batch_size)
     #LOSS.append(loss)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
     # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
@@ -292,7 +301,7 @@ for t in range(epochs):
     # h = mv_net.init_hidden(batch_size)
     for inputs, labels in val_dl:
         # h = tuple([each.data for each in h])
-        inputs = torch.reshape(inputs.float(), (batch_size, 1, inputs.shape[1]*inputs.shape[2]))
+        inputs = torch.reshape(inputs.float(), (val_batch_size, 1, inputs.shape[1]*inputs.shape[2]))
         val_output = cnn_model(inputs.float())
         val_labels = labels.unsqueeze(1)
         val_loss_c = criterion(val_output, val_labels.float())
@@ -300,7 +309,7 @@ for t in range(epochs):
         val_loss.append(val_loss_c.item())
         val_output_list.append(val_output)
         val_labels_list.append(val_labels)
-    VAL_LOSS.append(np.sum(val_loss) /batch_size)
+    VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
 
 """
@@ -347,7 +356,7 @@ ypred=[]
 ylab=[]
 
 for inputs, labels in test_dl:
-    inputs = torch.reshape(inputs, (batch_size, 1, inputs.shape[1]*inputs.shape[2]))
+    inputs = torch.reshape(inputs, (test_batch_size, 1, inputs.shape[1]*inputs.shape[2]))
     outputs = cnn_model(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
@@ -407,7 +416,7 @@ plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=360,right=800)
+plt.xlim(left=4500, right=5000)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
@@ -429,7 +438,7 @@ print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
 print('RMSE:%0.5f'%RMSE.item()) # RMSE values between 0.2 and 0.5 shows that the model can relatively predict the data accurately.
 print('R2:%0.5f'%R2.item())     # R-squared more than 0.75 is a very good value for showing the accuracy.
 
-plt.scatter(ylab,ypred,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.scatter(ylab, ypred,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
