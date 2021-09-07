@@ -248,10 +248,12 @@ learning_rate = 0.009
 train_batch_size = 500
 val_batch_size = 200
 test_batch_size = 300
+in_channels = 1
+out_channels = 2
 
 
 # Define model, criterion and optimizer:
-cnn_model = CNN(1, 2)
+cnn_model = CNN(in_channels, out_channels)
 criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
 optimizer = torch.optim.SGD(cnn_model.parameters(), lr=learning_rate)
 
@@ -282,7 +284,7 @@ for t in range(epochs):
     for x, label in train_dl:
         # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         # h = tuple([each.data for each in h])
-        x = torch.reshape(x.float(), (train_batch_size, 1, x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
+        x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
         output = cnn_model(x)
         label = label.unsqueeze(1)
         loss_c = criterion(output, label.float())
@@ -301,7 +303,7 @@ for t in range(epochs):
     # h = mv_net.init_hidden(batch_size)
     for inputs, labels in val_dl:
         # h = tuple([each.data for each in h])
-        inputs = torch.reshape(inputs.float(), (val_batch_size, 1, inputs.shape[1]*inputs.shape[2]))
+        inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
         val_output = cnn_model(inputs.float())
         val_labels = labels.unsqueeze(1)
         val_loss_c = criterion(val_output, val_labels.float())
@@ -356,7 +358,7 @@ ypred=[]
 ylab=[]
 
 for inputs, labels in test_dl:
-    inputs = torch.reshape(inputs, (test_batch_size, 1, inputs.shape[1]*inputs.shape[2]))
+    inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
     outputs = cnn_model(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
@@ -402,8 +404,8 @@ for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die ve
 
 # Plot the error
 plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
-plt.xticks(np.arange(-0.6, 0.6, 0.1))
-plt.xlim(-0.6, 0.6)
+plt.xticks(np.arange(-0.4, 0.4, 0.1))
+plt.xlim(-0.4, 0.4)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
