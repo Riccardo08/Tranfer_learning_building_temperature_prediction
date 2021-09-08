@@ -225,19 +225,20 @@ class CNN(nn.Module):
         self.fc3 = nn.Linear(5, 1)
         # self.fc4 = nn.Linear(20, 1)
 
-        def forward(self, x):
-            x = self.maxpool(F.relu(self.conv1(x)))
-            x = self.maxpool(x)
+    def forward(self, x):
+        x = self.maxpool(F.relu(self.conv1(x)))
+        x = self.maxpool(x)
 
-            x = self.maxpool(F.relu(self.conv2(x)))
-            x = self.maxpool(x)
+        x = self.maxpool(F.relu(self.conv2(x)))
+        x = self.maxpool(x)
 
-            x = x.view(-1, 5*self.kernel_size)
-            x = x.flatten(1)  # flatten the tensor starting at dimension 1
+        x = x.view(-1, 5*self.kernel_size)
+        x = x.flatten(1)  # flatten the tensor starting at dimension 1
 
-            x = F.relu(self.fc1(x))
-            x = F.relu(self.fc2(x))
-            x = self.fc3(x)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
 
 """
@@ -272,13 +273,13 @@ class CNN(nn.Module):
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 200
+epochs = 5
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
 val_batch_size = 200
 test_batch_size = 300
-in_channels = 2
+in_channels = 1
 out_channels = 18
 
 
