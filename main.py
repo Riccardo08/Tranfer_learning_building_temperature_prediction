@@ -162,6 +162,7 @@ print(type(val_mY), val_mY.shape)
 print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
+
 """
 #_____________________________1D-CNN_(SLOW)___________________________________
 class CNN(nn.Module):
@@ -242,7 +243,7 @@ class CNN(nn.Module):
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 200
+epochs = 250
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -455,6 +456,7 @@ plt.show()
 
 
 """
+
 #TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
 print('FINE-TUNING')
 model_ft = loadedmodel(pretrained=True) # optimize weights
@@ -482,7 +484,7 @@ model_ft, fine_tuning_acc = loadedmodel() #insert the arguments of the model
 
 
 
-#TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze all the network except the final layer. We need to
+#TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze some of the network layer weights. We need to
 # set requires_grad == False to freeze the parameters so that the gradients are not computed in backward() ) -------- only parameters of the last layera are updated
 print('FIXED FEATURES EXTRACTOR')
 model_conv = loadedmodel(pretrained=True)
@@ -508,6 +510,7 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 model_conv, feature_extractor_acc = loadedmodel() #insert the arguments of the model
 
 # visualize_model(model_conv)
+
 """
 
 
