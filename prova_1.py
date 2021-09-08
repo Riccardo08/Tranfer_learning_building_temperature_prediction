@@ -257,30 +257,17 @@ class CNN(nn.Module):
 
         return x
 """
-"""
-    def forward(self, x):
-        x = self.maxpool(F.relu(self.conv1(x)))
-        x = self.maxpool(F.relu(self.conv2(x)))
-        #x = self.maxpool(F.relu(self.conv3(x)))
-        x = x.view(-1, 71)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        # x = self.fc4(x)
-        return x
-"""
-
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 5
+epochs = 150
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
 val_batch_size = 200
 test_batch_size = 300
 in_channels = 1
-out_channels = 18
+out_channels = 6 # 18 is too much for my RAM memory
 
 
 # Define model, criterion and optimizer:
@@ -390,7 +377,7 @@ ypred=[]
 ylab=[]
 
 for inputs, labels in test_dl:
-    inputs = torch.reshape(inputs, (test_batch_size, 2, inputs.shape[1]*inputs.shape[2]))
+    inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
     outputs = cnn_model(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
@@ -417,22 +404,6 @@ ylab = np.reshape(ylab, (-1, 1))
 error = []
 error = ypred - ylab
 
-"""
-#________________________________VERIFICA: ylab == test_mY_____________________________________________
-test_mY_prova = test_mY.numpy()
-for x in range(0, len(test_mY_prova)):
-    test_mY_prova[x] = minT + test_mY_prova[x]*(maxT - minT)
-
-test_mY_prova = np.reshape(test_mY_prova, (-1, 1))
-test_mY_prova = test_mY_prova[:10400]
-
-n=0
-for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die vettori sono gli stessi
-    if test_mY_prova[x]==test_mY[x]:
-        n += 1
-
-#______________________________________________________________________________________________________
-"""
 
 # Plot the error
 plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
