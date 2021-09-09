@@ -381,6 +381,7 @@ test_model.add_module('fc5', nn.Linear(1, 1),
                       'fc6', nn.Linear(1, 1))
 print(test_model)
 """
+
 #TODO: per generalizzare la funzione di train si aper il tuning che non, mettere tra gli argomenti della funzione "mode=tuning" per lo scheduler
 
 num_ftrs = cnn_test.fc.in_features # # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
