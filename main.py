@@ -42,7 +42,7 @@ from torch.autograd import Variable
 from sklearn.metrics import mean_squared_error, r2_score
 
 
-plt.ion()   # interactive mode
+# plt.ion()   # interactive mode
 
 
 df = pd.read_csv('ASHRAE90.1_OfficeSmall_STD2016_NewYork.csv')
@@ -205,6 +205,8 @@ class CNN(nn.Module):
         return x
 """
 
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 #_____________________________1D-CNN_(FAST)___________________________________
 class CNN(nn.Module):
@@ -243,7 +245,7 @@ class CNN(nn.Module):
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 250
+epochs = 10
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -255,8 +257,9 @@ out_channels = 2
 
 # Define model, criterion and optimizer:
 cnn_model = CNN(in_channels, out_channels)
-criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
+criterion = torch.nn.MSELoss()
 optimizer = torch.optim.SGD(cnn_model.parameters(), lr=learning_rate)
+
 
 # Dataloaders:
 train_data = TensorDataset(train_mX, train_mY)
@@ -342,6 +345,130 @@ plt.legend()
 plt.show()
 
 
+#_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
+cnn_test = nn.Sequential()
+for param in cnn_model.parameters():
+    param.requires_grad_(False)
+
+i = 0
+for layers in cnn_model.modules():
+    i += 1
+    cnn_test.add_module('layer{}'.format(i), layers)
+
+"""
+def freeze_params(model):
+        # To freeze the residual layers
+        for param in model.parameters():
+            param.require_grad = False
+        for param in model.fc.parameters(): # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
+            param.require_grad = True
+
+cnn_test = freeze_params(cnn_prova)
+"""
+
+print(cnn_test)
+
+cnn_test[-4:] = nn.ModuleDict({
+    'fc5': nn.Linear(20, 5),
+    'fc6': nn.Linear(5, 1)
+    }
+)
+print(cnn_test)
+
+"""
+#TODO: nominare con self.name
+test_model.add_module('fc5', nn.Linear(1, 1),
+                      'fc6', nn.Linear(1, 1))
+print(test_model)
+"""
+#TODO: per generalizzare la funzione di train si aper il tuning che non, mettere tra gli argomenti della funzione "mode=tuning" per lo scheduler
+
+num_ftrs = cnn_test.fc.in_features # change the last fully connected layer
+
+# cnn_test = cnn_test.to(device)
+criterion = torch.nn.MSELoss()
+optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
+
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
+    since = time.time()
+
+    #best_model_wts = copy.deepcopy(model.state_dict()) # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    best_acc = 0.0
+
+    # initialize the training loss and the validation loss
+    LOSS = []
+    VAL_LOSS = []
+    val_output_list = []
+    val_labels_list = []
+    running_corrects = 0
+
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 20)
+
+        loss = []
+        model.train()
+        for x, label in train_dl:
+            # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+            # h = tuple([each.data for each in h])
+            x = torch.reshape(x.float(), (
+            train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
+            output = cnn_model(x)
+            _, preds = torch.max(output, 1)
+            label = label.unsqueeze(1)
+            loss_c = criterion(output, label.float())
+            optimizer.zero_grad()
+            #if epoch == 1:
+            # loss_c.backward(retain_graph=True)
+            #else:
+            loss_c.backward()
+            optimizer.step()
+            loss.append(loss_c.item())
+            running_corrects += torch.sum(preds == label.data)
+        LOSS.append(np.sum(loss) / train_batch_size)
+        if mode == 'tuning':
+            scheduler.step()
+        # LOSS.append(loss)
+        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+        # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+
+        # VALIDATION LOOP
+        model.eval()
+        val_loss = []
+        # h = mv_net.init_hidden(batch_size)
+        for inputs, labels in val_dl:
+            # h = tuple([each.data for each in h])
+            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
+            val_output = cnn_model(inputs.float())
+            val_labels = labels.unsqueeze(1)
+            val_loss_c = criterion(val_output, val_labels.float())
+            # VAL_LOSS.append(val_loss.item())
+            val_loss.append(val_loss_c.item())
+            val_output_list.append(val_output)
+            val_labels_list.append(val_labels)
+        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
+        print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+        #Tmettere calcolo best epoch
+        """
+        if epoch_acc > best_acc:
+            best_acc = epoch_acc
+            best_model_wts = copy.deepcopy(model.state_dict())
+        """
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    # print('Best val Acc: {:4f}'.format(best_acc))
+
+    # load best model weights
+    # model.load_state_dict(best_model_wts)
+    return model
+
+
+cnn_test = train_model(cnn_test, criterion, optimizer_ft, lr_scheduler, num_epochs=25, mode='tuning')
+
+
 
 #_____________________________________SAVE_THE_MODEL_____________________________
 """
@@ -360,7 +487,7 @@ ylab=[]
 
 for inputs, labels in test_dl:
     inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
-    outputs = cnn_model(inputs.float())
+    outputs = cnn_test(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
     outputs = minT + outputs*(maxT-minT)
