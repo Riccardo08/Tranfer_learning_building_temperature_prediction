@@ -455,3 +455,65 @@ plt.show()
 
 
 
+
+
+
+
+#TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
+print('FINE-TUNING')
+model_ft = loadedmodel(pretrained=True) # optimize weights
+print(model_ft)
+num_ftrs = model_ft.fc.in_features # change the last fully connected layer
+# Here the size of each output sample is set to 2.
+# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
+model_ft.fc = nn.Linear(num_ftrs, 2)
+
+model_ft = model_ft.to(device)
+
+criterion = nn.CrossEntropyLoss()
+
+# Observe that all parameters are being optimized
+optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+
+#TODO:Train and evaluate
+model_ft, fine_tuning_acc = loadedmodel() #insert the arguments of the model
+
+# visualize_model(model_ft)
+
+
+
+#TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze some of the network layer weights. We need to
+# set requires_grad == False to freeze the parameters so that the gradients are not computed in backward() ) -------- only parameters of the last layera are updated
+print('FIXED FEATURES EXTRACTOR')
+model_conv = loadedmodel(pretrained=True)
+print(model_conv)
+for param in model_conv.parameters():
+    param.requires_grad = False         #freeze all the layers in the beginning and then we set a new last fully connected layer
+
+# Parameters of newly constructed modules have requires_grad=True by default
+num_ftrs = model_conv.fc.in_features
+model_conv.fc = nn.Linear(num_ftrs, 2)  #set the inlet features of the fc layer; the outputs are 2 (2 classes)
+
+model_conv = model_conv.to(device)
+
+criterion = nn.CrossEntropyLoss()
+
+# Observe that only parameters of final layer are being optimized as opposed to before.
+optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
+
+# Decay LR by a factor of 0.1 every 7 epochs
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+
+#TODO: Train and evaluate
+model_conv, feature_extractor_acc = loadedmodel() #insert the arguments of the model
+
+# visualize_model(model_conv)
+
+
+
+
+
