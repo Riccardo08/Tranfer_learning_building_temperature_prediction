@@ -223,29 +223,32 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
         #self.pool2 = nn.MaxPool1d(2)
         # self.conv3 = nn.Conv1d(1, 1, self.kernel_size)
-        self.fc1 = nn.Linear(71, 60) # need to change the input (20).
-        self.fc2 = nn.Linear(60, 40)
-        self.fc3 = nn.Linear(40, 20)
-        self.fc4 = nn.Linear(20, 1)
+        self.fc = nn.Sequential(
+            nn.Linear(in_features=71, out_features=60), # need to change the input (20).
+            nn.ReLU(),
+            nn.Linear(60, 40),
+            nn.ReLU(),
+            nn.Linear(40, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1)
+        )
 
 
 
+#TODO: mettere il flatten al posto del x.view
     def forward(self, x):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool1(F.relu(self.conv2(x)))
         #x = self.pool2(F.relu(self.conv3(x)))
-        x = x.view(-1, 71)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
         return x
 
 
 
 
 #____________________________Define_PARAMETERS______________________________________________
-epochs = 10
+epochs = 200
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -303,7 +306,7 @@ for t in range(epochs):
 
 
     # VALIDATION LOOP
-    val_loss =[]
+    val_loss = []
     # h = mv_net.init_hidden(batch_size)
     for inputs, labels in val_dl:
         # h = tuple([each.data for each in h])
@@ -347,15 +350,23 @@ plt.show()
 
 #_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
 cnn_test = nn.Sequential()
+param_test = []
+param_model = []
 for param in cnn_model.parameters():
     param.requires_grad_(False)
 
+param_model = list(cnn_model.parameters())
+cnn_test = copy.deepcopy(cnn_model)
+param_test = list(cnn_test.parameters())
+
+"""
 i = 0
 for layers in cnn_model.modules():
     i += 1
-    cnn_test.add_module('layer{}'.format(i), layers)
+    if i > 0:
+        cnn_test.add_module('layer{}'.format(i), layers)
 
-"""
+
 def freeze_params(model):
         # To freeze the residual layers
         for param in model.parameters():
@@ -363,36 +374,56 @@ def freeze_params(model):
         for param in model.fc.parameters(): # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
             param.require_grad = True
 
+
 cnn_test = freeze_params(cnn_prova)
 """
 
+
+cnn_test.fc[0] = nn.Linear(71, 50)
+cnn_test.fc[1] = nn.ReLU()
+cnn_test.fc[2] = nn.Linear(50, 35)
+cnn_test.fc[3] = nn.ReLU()
+cnn_test.fc[4] = nn.Linear(35, 15)
+cnn_test.fc[5] = nn.ReLU()
+cnn_test.fc[6] = nn.Linear(15, 1)
+
 print(cnn_test)
 
-cnn_test[-4:] = nn.ModuleDict({
-    'fc5': nn.Linear(20, 5),
-    'fc6': nn.Linear(5, 1)
+"""
+cnn_prova= cnn_model
+cnn_prova.fc[0] = nn.Linear(71, 50)
+cnn_prova.fc[1] = nn.ReLU()
+cnn_prova.fc[2] = nn.Linear(50, 35)
+cnn_prova.fc[3] = nn.ReLU()
+cnn_prova.fc[4] = nn.Linear(35, 15)
+cnn_prova.fc[5] = nn.ReLU()
+cnn_prova.fc[6] = nn.Linear(15, 1)
+print(cnn_test)
+
+
+cnn_prova.fc[0:6] = nn.Sequential({
+    nn.Linear(40, 10),
+    nn.Linear(10, 1)
     }
 )
-print(cnn_test)
 
+cnn_test.fc[-3] = nn.ModuleList({
+    'fc5': nn.Linear(40, 10),
+    'fc6': nn.Linear(10, 1)
+    }
+)
 """
-#TODO: nominare con self.name
-test_model.add_module('fc5', nn.Linear(1, 1),
-                      'fc6', nn.Linear(1, 1))
-print(test_model)
-"""
 
-
-num_ftrs = cnn_test.fc.in_features # # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
+# num_ftrs = cnn_test.fc.in_features # # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
 
 # cnn_test = cnn_test.to(device)
-criterion = torch.nn.MSELoss()
+criterion_ft = torch.nn.MSELoss()
 optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-
+"""
 def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
     since = time.time()
 
@@ -405,13 +436,16 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
     val_output_list = []
     val_labels_list = []
     running_corrects = 0
-
+    t = 0
+    v = 0
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 20)
 
         loss = []
-        model.train()
+        if t == 0:
+            model.train()
+            t += 1
         for x, label in train_dl:
             # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
             # h = tuple([each.data for each in h])
@@ -433,12 +467,13 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
         if mode == 'tuning':
             scheduler.step()
         epoch_acc = running_corrects.double() / len(train_mX)
-        # LOSS.append(loss)
         # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-        # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
+
 
         # VALIDATION LOOP
-        model.eval()
+        if v == 0:
+            model.eval()
+            v += 1
         val_loss = []
         # h = mv_net.init_hidden(batch_size)
         for inputs, labels in val_dl:
@@ -467,8 +502,88 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
     return model, LOSS, VAL_LOSS
 
 
-cnn_test = train_model(cnn_test, criterion, optimizer_ft, lr_scheduler, num_epochs=25, mode='tuning')
+cnn_test = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=25, mode='tuning')
+"""
+#___________________________________________________________________________________________________________
 
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
+    since = time.time()
+
+    best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    best_acc = 0.0
+
+    # initialize the training loss and the validation loss
+    LOSS = []
+    VAL_LOSS = []
+    val_output_list = []
+    val_labels_list = []
+    running_corrects = 0
+    t = 0
+    v = 0
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 20)
+
+        loss = []
+        if t == 0:
+            model.train()
+            t += 1
+        for x, label in train_dl:
+            # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+            # h = tuple([each.data for each in h])
+            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
+            optimizer.zero_grad()
+            output = model(x)
+            _, preds = torch.max(output, 1)
+            label = label.unsqueeze(1)
+            loss_c = criterion(output, label.float())
+            # if epoch == 1:
+            # loss_c.backward(retain_graph=True)
+            # else:
+            loss_c.backward()
+            optimizer.step()
+            loss.append(loss_c.item())
+            running_corrects += torch.sum(preds == label.data)
+        LOSS.append(np.sum(loss) / train_batch_size)
+
+        if mode == 'tuning':
+            scheduler.step()
+
+        epoch_acc = running_corrects.double() / len(train_mX)
+        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+
+        # VALIDATION LOOP
+        if v == 0:
+            model.eval()
+            v += 1
+        val_loss = []
+        # h = mv_net.init_hidden(batch_size)
+        for inputs, labels in val_dl:
+            # h = tuple([each.data for each in h])
+            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
+            val_output = model(inputs.float())
+            val_labels = labels.unsqueeze(1)
+            val_loss_c = criterion(val_output, val_labels.float())
+            # VAL_LOSS.append(val_loss.item())
+            val_loss.append(val_loss_c.item())
+            val_output_list.append(val_output)
+            val_labels_list.append(val_labels)
+        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
+        print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+
+        if epoch_acc > best_acc:
+            best_acc = epoch_acc
+            best_model_wts = copy.deepcopy(model.state_dict())
+
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    print('Best val Acc: {:4f}'.format(best_acc))
+
+    # load best model weights
+    model.load_state_dict(best_model_wts)
+    return model, LOSS, VAL_LOSS
+
+cnn_test, LOOS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=30, mode='tuning')
 
 
 #_____________________________________SAVE_THE_MODEL_____________________________
