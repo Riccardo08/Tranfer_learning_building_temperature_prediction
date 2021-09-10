@@ -382,7 +382,6 @@ test_model.add_module('fc5', nn.Linear(1, 1),
 print(test_model)
 """
 
-#TODO: per generalizzare la funzione di train si aper il tuning che non, mettere tra gli argomenti della funzione "mode=tuning" per lo scheduler
 
 num_ftrs = cnn_test.fc.in_features # # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
 
@@ -393,10 +392,11 @@ optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
+
 def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
     since = time.time()
 
-    #best_model_wts = copy.deepcopy(model.state_dict()) # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    best_model_wts = copy.deepcopy(model.state_dict()) # 'state_dict' mappa ogni layer col suo tensore dei parametri
     best_acc = 0.0
 
     # initialize the training loss and the validation loss
@@ -422,9 +422,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
             label = label.unsqueeze(1)
             loss_c = criterion(output, label.float())
             optimizer.zero_grad()
-            #if epoch == 1:
+            # if epoch == 1:
             # loss_c.backward(retain_graph=True)
-            #else:
+            # else:
             loss_c.backward()
             optimizer.step()
             loss.append(loss_c.item())
@@ -432,6 +432,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
         LOSS.append(np.sum(loss) / train_batch_size)
         if mode == 'tuning':
             scheduler.step()
+        epoch_acc = running_corrects.double() / len(train_mX)
         # LOSS.append(loss)
         # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
         # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
@@ -452,19 +453,18 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
             val_labels_list.append(val_labels)
         VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
         print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-        #Tmettere calcolo best epoch
-        """
+
         if epoch_acc > best_acc:
             best_acc = epoch_acc
             best_model_wts = copy.deepcopy(model.state_dict())
-        """
+
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    # print('Best val Acc: {:4f}'.format(best_acc))
+    print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
-    # model.load_state_dict(best_model_wts)
-    return model
+    model.load_state_dict(best_model_wts)
+    return model, LOSS, VAL_LOSS
 
 
 cnn_test = train_model(cnn_test, criterion, optimizer_ft, lr_scheduler, num_epochs=25, mode='tuning')
