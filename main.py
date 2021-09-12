@@ -248,7 +248,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
     val_labels_list = []
     running_corrects = 0
     t = 0
-    v = 0
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 20)
@@ -282,9 +281,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
         # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
 
         #________________________________________VALIDATION LOOP_______________________________________
-        if v == 0:
-            model.eval()
-            v += 1
         val_loss = []
         # h = mv_net.init_hidden(batch_size)
         for inputs, labels in val_dl:
@@ -364,8 +360,8 @@ val_labels_list = np.reshape(val_labels_list, (-1, 1))
 """
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
-plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.plot(TRAIN_LOSS,'--', color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS, color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
 # plt.xticks(np.arange(0, epochs, 1))
@@ -505,6 +501,14 @@ for x in cnn_test.fc.parameters():
     print(x)
 
 num_ftrs = cnn_test.fc[0].in_features
+# TODO: Vedere se funziona anche facendo:
+cnn_test.fc = nn.Sequential(
+    nn.Linear(num_ftrs, 50),
+    nn.ReLU(),
+    nn.Linear(50, 35),
+    nn.ReLU(),
+    nn.Linear(15, 1)
+)
 
 cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
 cnn_test.fc[1] = nn.ReLU()
