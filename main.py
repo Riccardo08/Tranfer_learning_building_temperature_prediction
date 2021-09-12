@@ -53,11 +53,11 @@ Date['time'] = Date['time'].replace(to_replace='24:00:00', value= '0:00:00')
 data = Date['date']+' '+Date['time']
 data = pd.to_datetime(data, format='%m/%d %H:%M:%S')
 
-df['day']=data.apply(lambda x: x.day)
-df['month']=data.apply(lambda x: x.month)
-df['hour']=data.apply(lambda x: x.hour)
-df['dn']=data.apply(lambda x: x.weekday())
-df['data']=Date.date
+df['day'] = data.apply(lambda x: x.day)
+df['month'] = data.apply(lambda x: x.month)
+df['hour'] = data.apply(lambda x: x.hour)
+df['dn'] = data.apply(lambda x: x.weekday())
+df['data'] = Date.date
 
 df = df.reset_index(drop=True)
 
@@ -163,8 +163,7 @@ print(type(test_mX), test_mX.shape)
 print(type(test_mY), test_mY.shape)
 
 
-"""
-#_____________________________1D-CNN_(SLOW)___________________________________
+#_________________________________________________CNN_MODEL_____________________________________________________
 class CNN(nn.Module):
     def __init__(self, in_channel, out_channel):
         super(CNN, self).__init__()
@@ -174,57 +173,16 @@ class CNN(nn.Module):
         self.pad = 0
         self.dil = 1
         self.str = 1
-        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
-        self.pool = nn.MaxPool1d(2)
-        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        self.fc1 = nn.Linear(7100, 6000) # need to change the input (20).
-        self.fc2 = nn.Linear(6000, 4500)
-        self.fc3 = nn.Linear(4500, 2500)
-        self.fc4 = nn.Linear(2500, 1000)
-        self.fc5 = nn.Linear(1000, 700)
-        self.fc6 = nn.Linear(700, 150)
-        self.fc7 = nn.Linear(150, 80)
-        self.fc8 = nn.Linear(80, 20)
-        self.fc9 = nn.Linear(20, 1)
-
-
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 7100)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-        x = F.relu(self.fc5(x))
-        x = F.relu(self.fc6(x))
-        x = F.relu(self.fc7(x))
-        x = F.relu(self.fc8(x))
-        x = self.fc9(x)
-        return x
-"""
-
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-#_____________________________1D-CNN_(FAST)___________________________________
-class CNN(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super(CNN, self).__init__()
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-        self.kernel_size = 2
-        self.pad = 0
-        self.dil = 1
-        self.str = 1
-        self.conv1 = nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size, padding=self.pad, dilation=self.dil, stride=self.str)
-        self.pool1 = nn.MaxPool1d(2)
-        self.conv2 = nn.Conv1d(self.out_channel, 1, self.kernel_size)
-        #self.pool2 = nn.MaxPool1d(2)
-        # self.conv3 = nn.Conv1d(1, 1, self.kernel_size)
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Conv1d(self.out_channel, 1, self.kernel_size),
+            nn.ReLU(),
+            nn.MaxPool1d(2)
+        )
         self.fc = nn.Sequential(
-            nn.Linear(in_features=71, out_features=60), # need to change the input (20).
+            nn.Linear(in_features=71, out_features=60),  # need to change the input (20).
             nn.ReLU(),
             nn.Linear(60, 40),
             nn.ReLU(),
@@ -233,22 +191,17 @@ class CNN(nn.Module):
             nn.Linear(20, 1)
         )
 
-
-
-#TODO: mettere il flatten al posto del x.view
+    # TODO: mettere il flatten al posto del x.view
     def forward(self, x):
-        x = self.pool1(F.relu(self.conv1(x)))
-        x = self.pool1(F.relu(self.conv2(x)))
-        #x = self.pool2(F.relu(self.conv3(x)))
+        x = self.conv(x)
+        # x = self.pool2(F.relu(self.conv3(x)))
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
 
 
-
-
-#____________________________Define_PARAMETERS______________________________________________
-epochs = 200
+#______________________________________________Define_PARAMETERS______________________________________________
+epochs = 20
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -275,14 +228,92 @@ test_data = TensorDataset(test_mX, test_mY)
 test_dl = DataLoader(test_data, batch_size=test_batch_size, drop_last=True)
 
 
-#initialize the training loss and the validation loss
+# Initialize the training loss and the validation loss
 LOSS = []
 VAL_LOSS = []
 val_output_list = []
 val_labels_list = []
 
 
-#START THE TRAINING PROCESS
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
+    since = time.time()
+
+    # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    # best_acc = 0.0
+
+    # initialize the training loss and the validation loss
+    TRAIN_LOSS = []
+    VAL_LOSS = []
+    val_output_list = []
+    val_labels_list = []
+    running_corrects = 0
+    t = 0
+    v = 0
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 20)
+
+        #_____________________________________TRAINING_LOOP____________________________________________
+        if t == 0:
+            model.train()
+            t += 1
+        loss = []
+        for x, label in train_dl:
+            # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+            # h = tuple([each.data for each in h])
+            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
+            output = model(x)
+            # _, preds = torch.max(output, 1)
+            label = label.unsqueeze(1)
+            loss_c = criterion(output, label.float())
+            optimizer.zero_grad()
+            # if epoch == 1:
+            # loss_c.backward(retain_graph=True)
+            # else:
+            loss_c.backward()
+            optimizer.step()
+            loss.append(loss_c.item())
+            # running_corrects += torch.sum(preds == label.data) aggiustare: non sarà mai uguale perchè non si tratta di una classificazione
+        TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
+        if mode == 'tuning':
+            scheduler.step()
+
+        # epoch_acc = running_corrects.double() / len(train_mX)
+        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+
+        #________________________________________VALIDATION LOOP_______________________________________
+        if v == 0:
+            model.eval()
+            v += 1
+        val_loss = []
+        # h = mv_net.init_hidden(batch_size)
+        for inputs, labels in val_dl:
+            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
+            val_output = model(inputs.float())
+            val_labels = labels.unsqueeze(1)
+            val_loss_c = criterion(val_output, val_labels.float())
+            # VAL_LOSS.append(val_loss.item())
+            val_loss.append(val_loss_c.item())
+            val_output_list.append(val_output)
+            val_labels_list.append(val_labels)
+        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
+        # print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+        """
+        if epoch_acc > best_acc:
+            best_acc = epoch_acc
+            best_model_wts = copy.deepcopy(model.state_dict())
+        """
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    # print('Best val Acc: {:4f}'.format(best_acc))
+    # load best model weights
+    # model.load_state_dict(best_model_wts)
+    return TRAIN_LOSS, VAL_LOSS
+
+TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=30, mode='')
+
+# START THE TRAINING PROCESS
+"""
 cnn_model.train()
 
 for t in range(epochs):
@@ -291,7 +322,7 @@ for t in range(epochs):
     for x, label in train_dl:
         # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         # h = tuple([each.data for each in h])
-        x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1]*x.shape[2])) #100, 1, 48*6 --> (100, 1, 288)
+        x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1]*x.shape[2])) # 100, 1, 48*6 --> (100, 1, 288)
         output = cnn_model(x)
         label = label.unsqueeze(1)
         loss_c = criterion(output, label.float())
@@ -300,7 +331,7 @@ for t in range(epochs):
         optimizer.step()
         loss.append(loss_c.item())
     LOSS.append(np.sum(loss)/train_batch_size)
-    #LOSS.append(loss)
+    # LOSS.append(loss)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
     # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
 
@@ -320,6 +351,7 @@ for t in range(epochs):
         val_labels_list.append(val_labels)
     VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+"""
 
 """
 flatten = lambda l: [item for sublist in l for item in sublist]
@@ -330,11 +362,9 @@ val_labels_list = np.array(val_labels_list, dtype=float)
 val_output_list = np.reshape(val_output_list, (-1, 1))
 val_labels_list = np.reshape(val_labels_list, (-1, 1))
 """
-# x = torch.rand(100, 1, 288)
-# print(cnn_model(x).shape)
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
@@ -348,253 +378,7 @@ plt.legend()
 plt.show()
 
 
-#_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
-cnn_test = nn.Sequential()
-param_test = []
-param_model = []
-for param in cnn_model.parameters():
-    param.requires_grad_(False)
-
-param_model = list(cnn_model.parameters())
-cnn_test = copy.deepcopy(cnn_model)
-param_test = list(cnn_test.parameters())
-
-"""
-i = 0
-for layers in cnn_model.modules():
-    i += 1
-    if i > 0:
-        cnn_test.add_module('layer{}'.format(i), layers)
-
-
-def freeze_params(model):
-        # To freeze the residual layers
-        for param in model.parameters():
-            param.require_grad = False
-        for param in model.fc.parameters(): # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
-            param.require_grad = True
-
-
-cnn_test = freeze_params(cnn_prova)
-"""
-
-
-cnn_test.fc[0] = nn.Linear(71, 50)
-cnn_test.fc[1] = nn.ReLU()
-cnn_test.fc[2] = nn.Linear(50, 35)
-cnn_test.fc[3] = nn.ReLU()
-cnn_test.fc[4] = nn.Linear(35, 15)
-cnn_test.fc[5] = nn.ReLU()
-cnn_test.fc[6] = nn.Linear(15, 1)
-
-print(cnn_test)
-
-"""
-cnn_prova= cnn_model
-cnn_prova.fc[0] = nn.Linear(71, 50)
-cnn_prova.fc[1] = nn.ReLU()
-cnn_prova.fc[2] = nn.Linear(50, 35)
-cnn_prova.fc[3] = nn.ReLU()
-cnn_prova.fc[4] = nn.Linear(35, 15)
-cnn_prova.fc[5] = nn.ReLU()
-cnn_prova.fc[6] = nn.Linear(15, 1)
-print(cnn_test)
-
-
-cnn_prova.fc[0:6] = nn.Sequential({
-    nn.Linear(40, 10),
-    nn.Linear(10, 1)
-    }
-)
-
-cnn_test.fc[-3] = nn.ModuleList({
-    'fc5': nn.Linear(40, 10),
-    'fc6': nn.Linear(10, 1)
-    }
-)
-"""
-
-# num_ftrs = cnn_test.fc.in_features # # per usare questo bisogna inizializzare i layers lineari con self.fc=nn.Linear(...)
-
-# cnn_test = cnn_test.to(device)
-criterion_ft = torch.nn.MSELoss()
-optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
-
-# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
-lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
-
-"""
-def train_model(model, criterion, optimizer, scheduler, num_epochs, mode=''):
-    since = time.time()
-
-    best_model_wts = copy.deepcopy(model.state_dict()) # 'state_dict' mappa ogni layer col suo tensore dei parametri
-    best_acc = 0.0
-
-    # initialize the training loss and the validation loss
-    LOSS = []
-    VAL_LOSS = []
-    val_output_list = []
-    val_labels_list = []
-    running_corrects = 0
-    t = 0
-    v = 0
-    for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 20)
-
-        loss = []
-        if t == 0:
-            model.train()
-            t += 1
-        for x, label in train_dl:
-            # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-            # h = tuple([each.data for each in h])
-            x = torch.reshape(x.float(), (
-            train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
-            output = cnn_model(x)
-            _, preds = torch.max(output, 1)
-            label = label.unsqueeze(1)
-            loss_c = criterion(output, label.float())
-            optimizer.zero_grad()
-            # if epoch == 1:
-            # loss_c.backward(retain_graph=True)
-            # else:
-            loss_c.backward()
-            optimizer.step()
-            loss.append(loss_c.item())
-            running_corrects += torch.sum(preds == label.data)
-        LOSS.append(np.sum(loss) / train_batch_size)
-        if mode == 'tuning':
-            scheduler.step()
-        epoch_acc = running_corrects.double() / len(train_mX)
-        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-
-
-        # VALIDATION LOOP
-        if v == 0:
-            model.eval()
-            v += 1
-        val_loss = []
-        # h = mv_net.init_hidden(batch_size)
-        for inputs, labels in val_dl:
-            # h = tuple([each.data for each in h])
-            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
-            val_output = cnn_model(inputs.float())
-            val_labels = labels.unsqueeze(1)
-            val_loss_c = criterion(val_output, val_labels.float())
-            # VAL_LOSS.append(val_loss.item())
-            val_loss.append(val_loss_c.item())
-            val_output_list.append(val_output)
-            val_labels_list.append(val_labels)
-        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
-        print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-
-        if epoch_acc > best_acc:
-            best_acc = epoch_acc
-            best_model_wts = copy.deepcopy(model.state_dict())
-
-    time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
-
-    # load best model weights
-    model.load_state_dict(best_model_wts)
-    return model, LOSS, VAL_LOSS
-
-
-cnn_test = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=25, mode='tuning')
-"""
-#___________________________________________________________________________________________________________
-
-def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
-    since = time.time()
-
-    best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
-    best_acc = 0.0
-
-    # initialize the training loss and the validation loss
-    LOSS = []
-    VAL_LOSS = []
-    val_output_list = []
-    val_labels_list = []
-    running_corrects = 0
-    t = 0
-    v = 0
-    for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 20)
-
-        loss = []
-        if t == 0:
-            model.train()
-            t += 1
-        for x, label in train_dl:
-            # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-            # h = tuple([each.data for each in h])
-            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
-            optimizer.zero_grad()
-            output = model(x)
-            _, preds = torch.max(output, 1)
-            label = label.unsqueeze(1)
-            loss_c = criterion(output, label.float())
-            # if epoch == 1:
-            # loss_c.backward(retain_graph=True)
-            # else:
-            loss_c.backward()
-            optimizer.step()
-            loss.append(loss_c.item())
-            running_corrects += torch.sum(preds == label.data)
-        LOSS.append(np.sum(loss) / train_batch_size)
-
-        if mode == 'tuning':
-            scheduler.step()
-
-        epoch_acc = running_corrects.double() / len(train_mX)
-        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-
-        # VALIDATION LOOP
-        if v == 0:
-            model.eval()
-            v += 1
-        val_loss = []
-        # h = mv_net.init_hidden(batch_size)
-        for inputs, labels in val_dl:
-            # h = tuple([each.data for each in h])
-            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
-            val_output = model(inputs.float())
-            val_labels = labels.unsqueeze(1)
-            val_loss_c = criterion(val_output, val_labels.float())
-            # VAL_LOSS.append(val_loss.item())
-            val_loss.append(val_loss_c.item())
-            val_output_list.append(val_output)
-            val_labels_list.append(val_labels)
-        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
-        print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-
-        if epoch_acc > best_acc:
-            best_acc = epoch_acc
-            best_model_wts = copy.deepcopy(model.state_dict())
-
-    time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
-
-    # load best model weights
-    model.load_state_dict(best_model_wts)
-    return model, LOSS, VAL_LOSS
-
-cnn_test, LOOS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=30, mode='tuning')
-
-
-#_____________________________________SAVE_THE_MODEL_____________________________
-"""
-torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
-loadedmodel = CNN(1, 2)
-loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
-"""
-
-
-#___________________________TESTING_PHASE________________________________________
+#_________________________________________________TESTING_PHASE_______________________________________________
 # loadedmodel.eval()
 cnn_model.eval()
 test_losses = []
@@ -603,7 +387,7 @@ ylab=[]
 
 for inputs, labels in test_dl:
     inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
-    outputs = cnn_test(inputs.float())
+    outputs = cnn_model(inputs.float())
     #outputs = outputs.detach().numpy()
     #outputs = np.reshape(outputs, (-1, 1))
     outputs = minT + outputs*(maxT-minT)
@@ -695,66 +479,145 @@ plt.title("Prediction distribution", size=15)
 plt.show()
 
 
-
-
-
+#_____________________________________SAVE_THE_MODEL_____________________________
+"""
+torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
+loadedmodel = CNN(1, 2)
+loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 """
 
-#TODO: FINE-TUNING the convnet (Load a pretrained model and reset final fully connected layer)-------- parameters are all updated
-print('FINE-TUNING')
-model_ft = loadedmodel(pretrained=True) # optimize weights
-print(model_ft)
-num_ftrs = model_ft.fc.in_features # change the last fully connected layer
-# Here the size of each output sample is set to 2.
-# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
-model_ft.fc = nn.Linear(num_ftrs, 2)
 
-model_ft = model_ft.to(device)
 
-criterion = nn.CrossEntropyLoss()
+#_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
+def freeze_params(model):
+    for param_c in model.conv.parameters():
+            param_c.requires_grad = False
+    for param_fc in model.fc.parameters():
+            param_fc.requires_grad = True
+    return model
 
-# Observe that all parameters are being optimized
-optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
+cnn_test = freeze_params(cnn_model)
+
+print(cnn_test)
+for i in cnn_test.conv.parameters():
+    print(i)
+for x in cnn_test.fc.parameters():
+    print(x)
+
+num_ftrs = cnn_test.fc[0].in_features
+
+cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
+cnn_test.fc[1] = nn.ReLU()
+cnn_test.fc[2] = nn.Linear(50, 35)
+cnn_test.fc[3] = nn.ReLU()
+cnn_test.fc[4] = nn.Linear(35, 15)
+cnn_test.fc[5] = nn.ReLU()
+cnn_test.fc[6] = nn.Linear(15, 1)
+print(cnn_test.fc)
+
+# How to delete some layers from the model:
+# cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
+
+criterion_ft = torch.nn.MSELoss()
+optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-
-#TODO:Train and evaluate
-model_ft, fine_tuning_acc = loadedmodel() #insert the arguments of the model
-
-# visualize_model(model_ft)
-
-
-
-#TODO: ConvNet as FIXED FEATURE EXTRACTOR (Here, we need to freeze some of the network layer weights. We need to
-# set requires_grad == False to freeze the parameters so that the gradients are not computed in backward() ) -------- only parameters of the last layera are updated
-print('FIXED FEATURES EXTRACTOR')
-model_conv = loadedmodel(pretrained=True)
-print(model_conv)
-for param in model_conv.parameters():
-    param.requires_grad = False         #freeze all the layers in the beginning and then we set a new last fully connected layer
-
-# Parameters of newly constructed modules have requires_grad=True by default
-num_ftrs = model_conv.fc.in_features
-model_conv.fc = nn.Linear(num_ftrs, 2)  #set the inlet features of the fc layer; the outputs are 2 (2 classes)
-
-model_conv = model_conv.to(device)
-
-criterion = nn.CrossEntropyLoss()
-
-# Observe that only parameters of final layer are being optimized as opposed to before.
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
-
-# Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
-
-#TODO: Train and evaluate
-model_conv, feature_extractor_acc = loadedmodel() #insert the arguments of the model
-
-# visualize_model(model_conv)
-
+#_______________________________________________________________________________________________________________________
 """
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
+    since = time.time()
+
+    # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    # best_acc = 0.0
+
+    # initialize the training loss and the validation loss
+    TRAIN_LOSS = []
+    VAL_LOSS = []
+    val_output_list = []
+    val_labels_list = []
+    running_corrects = 0
+    t = 0
+    v = 0
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 20)
+
+        #_____________________________________TRAINING_LOOP____________________________________________
+        if t == 0:
+            model.train()
+            t += 1
+        loss = []
+        for x, label in train_dl:
+            # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+            # h = tuple([each.data for each in h])
+            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
+            output = model(x)
+            # _, preds = torch.max(output, 1)
+            label = label.unsqueeze(1)
+            loss_c = criterion(output, label.float())
+            optimizer.zero_grad()
+            # if epoch == 1:
+            # loss_c.backward(retain_graph=True)
+            # else:
+            loss_c.backward()
+            optimizer.step()
+            loss.append(loss_c.item())
+            # running_corrects += torch.sum(preds == label.data) aggiustare: non sarà mai uguale perchè non si tratta di una classificazione
+        TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
+        if mode == 'tuning':
+            scheduler.step()
+
+        # epoch_acc = running_corrects.double() / len(train_mX)
+        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
+
+        #________________________________________VALIDATION LOOP_______________________________________
+        if v == 0:
+            model.eval()
+            v += 1
+        val_loss = []
+        # h = mv_net.init_hidden(batch_size)
+        for inputs, labels in val_dl:
+            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
+            val_output = model(inputs.float())
+            val_labels = labels.unsqueeze(1)
+            val_loss_c = criterion(val_output, val_labels.float())
+            # VAL_LOSS.append(val_loss.item())
+            val_loss.append(val_loss_c.item())
+            val_output_list.append(val_output)
+            val_labels_list.append(val_labels)
+        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
+        # print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+        
+        # if epoch_acc > best_acc:
+        #     best_acc = epoch_acc
+        #     best_model_wts = copy.deepcopy(model.state_dict())
+        
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    # print('Best val Acc: {:4f}'.format(best_acc))
+    # load best model weights
+    # model.load_state_dict(best_model_wts)
+    return TRAIN_LOSS, VAL_LOSS
+"""
+
+TRAIN_LOSS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=30, mode='tuning')
+
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+# plt.xticks(np.arange(0, epochs, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+plt.show()
 
 
 
