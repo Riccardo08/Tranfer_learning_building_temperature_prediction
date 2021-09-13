@@ -39,18 +39,18 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 
 df = pd.read_csv('ASHRAE90.1_OfficeSmall_STD2016_NewYork.csv')
-df=df.iloc[288:,:]
+df = df.iloc[288:,:]
 Date = df['Date/Time'].str.split(' ', expand=True)
 Date.rename(columns={0:'nullo',1:'date',2:'null', 3:'time'},inplace=True)
 Date['time'] = Date['time'].replace(to_replace='24:00:00', value= '0:00:00')
 data = Date['date']+' '+Date['time']
 data = pd.to_datetime(data, format='%m/%d %H:%M:%S')
 
-df['day']=data.apply(lambda x: x.day)
-df['month']=data.apply(lambda x: x.month)
-df['hour']=data.apply(lambda x: x.hour)
-df['dn']=data.apply(lambda x: x.weekday())
-df['data']=Date.date
+df['day'] = data.apply(lambda x: x.day)
+df['month'] = data.apply(lambda x: x.month)
+df['hour'] = data.apply(lambda x: x.hour)
+df['dn'] = data.apply(lambda x: x.weekday())
+df['data'] = Date.date
 
 df = df.reset_index(drop=True)
 
@@ -64,8 +64,7 @@ col_names = ['Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)',
 
 multi_norm = (df[col_names]-df[col_names].min())/(df[col_names].max()-df[col_names].min())
 
-df['random_temp'] = np.sort(np.random(0.5, -0.5, len(df)))
-
+# df['random_temp'] = np.sort(np.random(0.5, -0.5, len(df)))
 random_num = []
 for x in range(len(multi_norm)):
     random_num.append(np.random.uniform(-0.5, 0.5))
@@ -73,6 +72,10 @@ for x in range(len(multi_norm)):
 random_num = pd.Series(random_num)
 multi_norm['random_num'] = random_num
 multi_norm['random_temp'] = multi_norm['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'] + random_num
+
+#_______DELETE_USELESS_COLUMNS________________
+multi_norm.drop('random_num', inplace=True, axis=1)
+multi_norm.drop('CORE_ZN:Zone Mean Air Temperature [C](TimeStep)', inplace=True, axis=1)
 
 
 shifting_period = 1
@@ -93,13 +96,11 @@ def split_sequences(sequences, n_steps):
 
 
 
-# Normalization
-l_train = int(0.8 * len(df))
+l_train = int(0.8 * len(multi_norm))
 l_train_m = int(0.8 * l_train)# training length
 # l_val_m = int(0.2*l_train)# validation length
-maxT = df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'].max()  # max value
-minT = df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'].min()  # max value
-
+maxT = multi_norm['random_temp'].max()  # max value
+minT = multi_norm['random_temp'].min()  # max value
 
 
 def multi_shift(df, col_name):
@@ -118,10 +119,10 @@ def multi_shift(df, col_name):
     return train_mx, test_mx, val_mx
 
 period = shifting_period
-train_mx, test_mx, val_mx = multi_shift(multi_norm, col_name='CORE_ZN:Zone Mean Air Temperature [C](TimeStep)')
-train_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][1:l_train_m]-minT)/(maxT-minT)
-val_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][l_train_m+1:l_train]-minT)/(maxT-minT)
-test_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][l_train+1:]-minT)/(maxT-minT)
+train_mx, test_mx, val_mx = multi_shift(multi_norm, col_name='random_temp')
+train_my = multi_norm['random_temp'][1:l_train_m]
+val_my = multi_norm['random_temp'][l_train_m+1:l_train]
+test_my = multi_norm['random_temp'][l_train+1:]
 test_my = test_my.reset_index(drop=True)
 test_mx = test_mx.reset_index(drop=True)
 val_my = val_my.reset_index(drop=True)
@@ -145,12 +146,12 @@ val_mX, val_mY = split_sequences(val_m, n_steps=n_steps)
 test_mX, test_mY = split_sequences(test_m, n_steps=n_steps)
 
 # Convert to tensors
-train_mX=torch.from_numpy(train_mX)
-train_mY=torch.from_numpy(train_mY)
-val_mX=torch.from_numpy(val_mX)
-val_mY=torch.from_numpy(val_mY)
-test_mX=torch.from_numpy(test_mX)
-test_mY=torch.from_numpy(test_mY)
+train_mX = torch.from_numpy(train_mX)
+train_mY = torch.from_numpy(train_mY)
+val_mX = torch.from_numpy(val_mX)
+val_mY = torch.from_numpy(val_mY)
+test_mX = torch.from_numpy(test_mX)
+test_mY = torch.from_numpy(test_mY)
 
 print(type(train_mX), train_mX.shape)
 print(type(train_mY), train_mY.shape)
