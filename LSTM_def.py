@@ -181,8 +181,8 @@ class MV_LSTM(torch.nn.Module):
     def __init__(self, n_features, seq_length, drop_prob=0.2):
         super(MV_LSTM, self).__init__()
         self.seq_len = seq_length
-        self.n_hidden = num_hidden# number of hidden states
-        self.n_layers = num_layers# number of LSTM layers (stacked)
+        self.n_hidden = num_hidden # number of hidden states
+        self.n_layers = num_layers # number of LSTM layers (stacked)
         self.l_lstm = torch.nn.LSTM(input_size = n_features,
                                  hidden_size = self.n_hidden,
                                  num_layers = self.n_layers,
@@ -796,15 +796,18 @@ def freeze_params(model):
     return model
 
 for param_c in mv_net.l_lstm.parameters():
-        print(param_c)
+    print(param_c)
 
 lstm_test = freeze_params(mv_net)
-
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
     print(i)
 for x in lstm_test.l_linear.parameters():
     print(x)
+
+#____________________ADD MODULES_____________________________________________________________________________
+
+lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=n_features, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 
 num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
@@ -826,8 +829,9 @@ lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 LOSS = []
 VAL_LOSS = []
+
 #START THE TRAINING PROCESS
-mv_net.train()
+lstm_test.train()
 
 for t in range(train_episodes):
 
@@ -836,7 +840,7 @@ for t in range(train_episodes):
     for x, label in train_dl:
         h = mv_net.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         h = tuple([each.data for each in h])
-        output, h = mv_net(x.float(), h)
+        output, h = lstm_test(x.float(), h)
         label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
         loss_c = criterion(output, label.float())
         optimizer.zero_grad()
@@ -852,7 +856,7 @@ for t in range(train_episodes):
     h = mv_net.init_hidden(batch_size)
     for inputs, labels in val_dl:
         h = tuple([each.data for each in h])
-        val_output, h = mv_net(inputs.float(), h)
+        val_output, h = lstm_test(inputs.float(), h)
         val_labels = labels.unsqueeze(1)
         val_loss_c = criterion(val_output, val_labels.float())
         val_loss.append(val_loss_c.item())
@@ -877,3 +881,48 @@ plt.legend()
 # plt.savefig('immagini_LSTM/final_LSTM_Train_VS_Val_LOSS(10_neurons).png')
 plt.show()
 
+#______________________________________TESTING______________________________
+test_data = TensorDataset(test_mX, test_mY)
+test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
+test_losses = []
+h = lstm_test.init_hidden(batch_size)
+
+
+lstm_test.eval()
+ypred=[]
+ylab=[]
+for inputs, labels in test_dl:
+    h = tuple([each.data for each in h])
+    test_output, h = lstm_test(inputs.float(), h)
+    labels = labels.unsqueeze(1)
+    test_output = test_output.detach().numpy()
+    #RESCALE OUTPUT
+    test_output = np.reshape(test_output, (-1, 1))
+    test_output = minT + test_output*(maxT-minT)
+
+    # labels = labels.item()
+    labels = labels.detach().numpy()
+    labels = np.reshape(labels, (-1, 1))
+    #RESCALE LABELS
+    labels = minT + labels*(maxT-minT)
+    ypred.append(test_output)
+    ylab.append(labels)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+ypred = flatten(ypred)
+ylab = flatten(ylab)
+ypred = np.array(ypred, dtype=float)
+ylab = np.array(ylab, dtype = float)
+
+
+error = []
+error = ypred - ylab
+
+plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.4, 0.4, 0.1))
+plt.xlim(-0.4, 0.4)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini_LSTM/first_model_error.png')
+plt.show()
