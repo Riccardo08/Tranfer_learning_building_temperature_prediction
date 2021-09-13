@@ -951,7 +951,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 MAPE = mean_absolute_percentage_error(ylab, ypred)
-RMSE=mean_squared_error(ylab,ypred)**0.5
+RMSE = mean_squared_error(ylab,ypred)**0.5
 R2 = r2_score(ylab,ypred)
 
 print('MAPE:%0.5f%%'%MAPE)
