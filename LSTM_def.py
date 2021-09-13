@@ -787,7 +787,7 @@ plt.savefig('immagini_LSTM/final_LSTM_prediction_distribution(10_neurons).png')
 plt.show()
 
 
-#_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
+#_____________________________________________________TUNING_PHASE_______________________________________________
 def freeze_params(model):
     for param_c in model.l_lstm.parameters():
             param_c.requires_grad = False
@@ -795,8 +795,8 @@ def freeze_params(model):
             param_fc.requires_grad = True
     return model
 
-for param_c in mv_net.l_lstm.parameters():
-    print(param_c)
+# for param_c in mv_net.l_lstm.parameters():
+#     print(param_c)
 
 lstm_test = freeze_params(mv_net)
 print(lstm_test)
@@ -807,7 +807,10 @@ for x in lstm_test.l_linear.parameters():
 
 #____________________ADD MODULES_____________________________________________________________________________
 
-lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=n_features, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
+lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
+#lstm_test.l_lstm.lstm_h = nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True)
+
+print(lstm_test)
 
 num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
@@ -925,4 +928,43 @@ plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
 # plt.savefig('immagini_LSTM/first_model_error.png')
+plt.show()
+
+
+plt.plot(ypred, color='orange', label="Predicted")
+plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=0,right=800)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/I_LSTM_real_VS_predicted_temperature(10_epochs).png')
+plt.show()
+
+
+#METRICS
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+MAPE = mean_absolute_percentage_error(ylab, ypred)
+RMSE=mean_squared_error(ylab,ypred)**0.5
+R2 = r2_score(ylab,ypred)
+
+print('MAPE:%0.5f%%'%MAPE)
+print('RMSE:', RMSE.item())
+print('R2:', R2.item())
+
+
+plt.scatter(ylab,ypred,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+# plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
 plt.show()
