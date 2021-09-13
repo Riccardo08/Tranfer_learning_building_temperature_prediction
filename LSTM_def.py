@@ -795,6 +795,9 @@ def freeze_params(model):
             param_fc.requires_grad = True
     return model
 
+for param_c in mv_net.l_lstm.parameters():
+        print(param_c)
+
 lstm_test = freeze_params(mv_net)
 
 print(lstm_test)
@@ -811,16 +814,6 @@ lstm_test.l_linear = nn.Sequential(
     nn.ReLU(),
     nn.Linear(30, 1)
 )
-"""
-lstm_test.l_linear = nn.Linear(num_ftrs, 50)
-cnn_test.fc[1] = nn.ReLU()
-cnn_test.fc[2] = nn.Linear(50, 35)
-cnn_test.fc[3] = nn.ReLU()
-cnn_test.fc[4] = nn.Linear(35, 15)
-cnn_test.fc[5] = nn.ReLU()
-cnn_test.fc[6] = nn.Linear(15, 1)
-print(cnn_test.fc)
-"""
 
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
@@ -831,7 +824,8 @@ optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-
+LOSS = []
+VAL_LOSS = []
 #START THE TRAINING PROCESS
 mv_net.train()
 
@@ -851,7 +845,7 @@ for t in range(train_episodes):
         loss.append(loss_c.item())
     LOSS.append(np.sum(loss) /batch_size)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-
+    lr_scheduler.step()
 
     # VALIDATION LOOP
     val_loss =[]
@@ -866,4 +860,20 @@ for t in range(train_episodes):
     VAL_LOSS.append(np.sum(val_loss) /batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
     #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
+
+
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+plt.xticks(np.arange(0, train_episodes, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini_LSTM/final_LSTM_Train_VS_Val_LOSS(10_neurons).png')
+plt.show()
 
