@@ -201,7 +201,7 @@ class CNN(nn.Module):
 
 
 #______________________________________________Define_PARAMETERS______________________________________________
-epochs = 20
+epochs = 200
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -293,7 +293,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
             val_output_list.append(val_output)
             val_labels_list.append(val_labels)
         VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
-        # print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+
+        print('Epoch : ', epoch, 'Training Loss : ', TRAIN_LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
         """
         if epoch_acc > best_acc:
             best_acc = epoch_acc
@@ -306,7 +307,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
     # model.load_state_dict(best_model_wts)
     return TRAIN_LOSS, VAL_LOSS
 
-TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=30, mode='')
+TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=epochs, mode='')
 
 # START THE TRAINING PROCESS
 """
@@ -370,7 +371,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+# plt.savefig('immagini/CONV_Train_VS_Val_LOSS(2000_epochs).png')
 plt.show()
 
 
@@ -433,7 +434,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini_LSTM/first_model_error.png')
+# plt.savefig('immagini/cnn_model_error.png')
 plt.show()
 
 
@@ -447,7 +448,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/final_LSTM_real_VS_predicted_temperature(10_neurons).png')
+plt.savefig('immagini/CNN_real_VS_predicted_temperature.png')
 plt.show()
 
 
@@ -471,7 +472,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('immagini_LSTM/final_LSTM_prediction_distribution(10_neurons).png')
+plt.savefig('immagini/CNN_prediction_distribution.png')
 plt.show()
 
 
@@ -507,9 +508,10 @@ cnn_test.fc = nn.Sequential(
     nn.ReLU(),
     nn.Linear(50, 35),
     nn.ReLU(),
-    nn.Linear(15, 1)
+    nn.Linear(35, 1)
 )
-
+print(cnn_test)
+"""
 cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
 cnn_test.fc[1] = nn.ReLU()
 cnn_test.fc[2] = nn.Linear(50, 35)
@@ -518,7 +520,7 @@ cnn_test.fc[4] = nn.Linear(35, 15)
 cnn_test.fc[5] = nn.ReLU()
 cnn_test.fc[6] = nn.Linear(15, 1)
 print(cnn_test.fc)
-
+"""
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
@@ -606,11 +608,11 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
     return TRAIN_LOSS, VAL_LOSS
 """
 
-TRAIN_LOSS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=30, mode='tuning')
+TRAIN_LOSS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=150, mode='tuning')
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
