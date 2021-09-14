@@ -235,7 +235,7 @@ val_output_list = []
 val_labels_list = []
 
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_dataloader, val_dataloader):
     since = time.time()
 
     # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
@@ -257,7 +257,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
             model.train()
             t += 1
         loss = []
-        for x, label in train_dl:
+        for x, label in train_dataloader:
             # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
             # h = tuple([each.data for each in h])
             x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
@@ -283,7 +283,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
         #________________________________________VALIDATION LOOP_______________________________________
         val_loss = []
         # h = mv_net.init_hidden(batch_size)
-        for inputs, labels in val_dl:
+        for inputs, labels in val_dataloader:
             inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
             val_output = model(inputs.float())
             val_labels = labels.unsqueeze(1)
@@ -307,7 +307,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
     # model.load_state_dict(best_model_wts)
     return TRAIN_LOSS, VAL_LOSS
 
-TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=epochs, mode='')
+TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=epochs, mode='', train_dataloader=train_dl, val_dataloader=val_dl)
 
 # START THE TRAINING PROCESS
 """
@@ -516,14 +516,29 @@ optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-#TODO: Define new Dataloaders (inserire negli argomenti della funzione i dataloaders)
 
-TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning')
+#__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
+from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+
+#New Dataloaders
+train_batch_size = 500
+train_data_new = TensorDataset(train_mX_new, train_mY_new)
+train_dl_new = DataLoader(train_data_new, batch_size=train_batch_size, shuffle=True, drop_last=True)
+
+val_batch_size = 300
+val_data_new = TensorDataset(val_mX_new, val_mY_new)
+val_dl_new = DataLoader(val_data_new, batch_size=val_batch_size, shuffle=True, drop_last=True)
+
+test_data_new = TensorDataset(test_mX_new, test_mY_new)
+test_dl_new = DataLoader(test_data_new, batch_size=test_batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
+
+#_TRAIN_THE_MODEL_________________________________________________________________________________
+TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning', train_dataloader=train_dl_new, val_dataloader=val_dl_new)
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
-plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.plot(TRAIN_LOSS_NEW,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(VAL_LOSS_NEW,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
 plt.ylim(bottom=0)
