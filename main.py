@@ -516,6 +516,7 @@ optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
+#TODO: Define new Dataloaders (inserire negli argomenti della funzione i dataloaders)
 
 TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning')
 
@@ -533,6 +534,91 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
 # plt.savefig('immagini/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
+plt.show()
+
+
+#_________________________________________________TESTING_PHASE_______________________________________________
+# loadedmodel.eval()
+cnn_test.eval()
+test_losses = []
+ypred_new=[]
+ylab_new=[]
+
+for inputs, labels in test_dl_new:
+    inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
+    outputs = cnn_test(inputs.float())
+    #outputs = outputs.detach().numpy()
+    #outputs = np.reshape(outputs, (-1, 1))
+    outputs = minT + outputs*(maxT-minT)
+
+    labs = labels.unsqueeze(1)
+    # labs = labs.float()
+    #labels = labs.detach().numpy()
+    #labs = np.reshape(labs, (-1, 1))
+    labs = minT + labs*(maxT-minT)
+
+    ypred_new.append(outputs)
+    ylab_new.append(labs)
+
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+ypred_new = flatten(ypred)
+ylab_new = flatten(ylab)
+ypred_new = np.array(ypred, dtype=float)
+ylab_new = np.array(ylab, dtype=float)
+ypred_new = np.reshape(ypred, (-1, 1))
+ylab_new = np.reshape(ylab, (-1, 1))
+
+error_new = []
+error_new = ypred_new - ylab_new
+
+
+# Plot the error
+plt.hist(error_new, 200, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini/cnn_model_error.png')
+plt.show()
+
+
+plt.plot(ypred_new, color='orange', label="Predicted")
+plt.plot(ylab_new, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=4500, right=5000)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+plt.savefig('immagini/CNN_real_VS_predicted_temperature.png')
+plt.show()
+
+
+#______________________________METRICS_EVALUATION___________________________________________________
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+MAPE = mean_absolute_percentage_error(ylab_new, ypred_new)
+RMSE=mean_squared_error(ylab_new, ypred_new)**0.5
+R2 = r2_score(ylab_new, ypred_new)
+
+print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
+print('RMSE:%0.5f'%RMSE.item()) # RMSE values between 0.2 and 0.5 shows that the model can relatively predict the data accurately.
+print('R2:%0.5f'%R2.item())     # R-squared more than 0.75 is a very good value for showing the accuracy.
+
+plt.scatter(ylab_new, ypred_new,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+plt.savefig('immagini/CNN_prediction_distribution.png')
 plt.show()
 
 
