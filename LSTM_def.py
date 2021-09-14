@@ -319,7 +319,7 @@ ylab = np.array(ylab, dtype = float)
 error = []
 error = ypred - ylab
 
-plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
+plt.hist(error, 100, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-0.4, 0.4, 0.1))
 plt.xlim(-0.4, 0.4)
 plt.title('First model prediction error')
@@ -799,6 +799,7 @@ def freeze_params(model):
 #     print(param_c)
 
 lstm_test = freeze_params(mv_net)
+
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
     print(i)
@@ -810,7 +811,6 @@ for x in lstm_test.l_linear.parameters():
 lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 #lstm_test.l_lstm.lstm_h = nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True)
 
-print(lstm_test)
 
 num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
@@ -820,15 +820,30 @@ lstm_test.l_linear = nn.Sequential(
     nn.ReLU(),
     nn.Linear(30, 1)
 )
+print(lstm_test)
 
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
 criterion_ft = torch.nn.MSELoss()
 optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
-
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+#__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
+from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+
+#New Dataloaders
+train_batch_size = 500
+train_data_new = TensorDataset(train_mX_new, train_mY_new)
+train_dl_new = DataLoader(train_data_new, batch_size=batch_size, shuffle=True, drop_last=True)
+
+val_batch_size = 300
+val_data_new = TensorDataset(val_mX_new, val_mY_new)
+val_dl_new = DataLoader(val_data_new, batch_size=batch_size, shuffle=True, drop_last=True)
+
+test_data_new = TensorDataset(test_mX_new, test_mY_new)
+test_dl_new = DataLoader(test_data_new, batch_size=batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
 
 LOSS = []
 VAL_LOSS = []
@@ -838,10 +853,10 @@ lstm_test.train()
 
 for t in range(train_episodes):
 
-    h = mv_net.init_hidden(batch_size)  #hidden state is initialized at each epoch
+    h = lstm_test.init_hidden(batch_size)  #hidden state is initialized at each epoch
     loss = []
-    for x, label in train_dl:
-        h = mv_net.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+    for x, label in train_dl_new:
+        h = lstm_test.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         h = tuple([each.data for each in h])
         output, h = lstm_test(x.float(), h)
         label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
@@ -856,8 +871,8 @@ for t in range(train_episodes):
 
     # VALIDATION LOOP
     val_loss =[]
-    h = mv_net.init_hidden(batch_size)
-    for inputs, labels in val_dl:
+    h = lstm_test.init_hidden(batch_size)
+    for inputs, labels in val_dl_new:
         h = tuple([each.data for each in h])
         val_output, h = lstm_test(inputs.float(), h)
         val_labels = labels.unsqueeze(1)
@@ -871,8 +886,8 @@ for t in range(train_episodes):
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
-plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
+plt.plot(LOSS, '--', color='r', linewidth=1, label='Train Loss')
+plt.plot(VAL_LOSS, color='b', linewidth=1, label='Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
 plt.xticks(np.arange(0, train_episodes, 1))
@@ -885,16 +900,15 @@ plt.legend()
 plt.show()
 
 #______________________________________TESTING______________________________
-test_data = TensorDataset(test_mX, test_mY)
-test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
+# test_data = TensorDataset(test_mX, test_mY)
+# test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
 test_losses = []
 h = lstm_test.init_hidden(batch_size)
 
-
 lstm_test.eval()
-ypred=[]
-ylab=[]
-for inputs, labels in test_dl:
+ypred = []
+ylab = []
+for inputs, labels in test_dl_new:
     h = tuple([each.data for each in h])
     test_output, h = lstm_test(inputs.float(), h)
     labels = labels.unsqueeze(1)
