@@ -391,19 +391,17 @@ for x in lstm_test.l_linear.parameters():
 
 #____________________ADD MODULES_____________________________________________________________________________
 
-lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
-#lstm_test.l_lstm.lstm_h = nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True)
+# lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 
-"""
 num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
-    nn.Linear(num_ftrs, 50),
+    nn.Linear(num_ftrs, 5),
     nn.ReLU(),
-    nn.Linear(50, 30),
+    nn.Linear(5, 3),
     nn.ReLU(),
-    nn.Linear(30, 1)
+    nn.Linear(3, 1)
 )
-"""
+
 print(lstm_test)
 
 # How to delete some layers from the model:
@@ -454,7 +452,7 @@ for t in range(train_episodes):
     lr_scheduler.step()
 
     # VALIDATION LOOP
-    val_loss =[]
+    val_loss = []
     h = lstm_test.init_hidden(batch_size)
     for inputs, labels in val_dl_new:
         h = tuple([each.data for each in h])
