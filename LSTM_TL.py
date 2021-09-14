@@ -38,7 +38,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 
 df = pd.read_csv('ASHRAE90.1_OfficeSmall_STD2016_NewYork.csv')
-df=df.iloc[288:,:]
+df=df.iloc[288:, :]
 Date = df['Date/Time'].str.split(' ', expand=True)
 Date.rename(columns={0:'nullo',1:'date',2:'null', 3:'time'},inplace=True)
 Date['time'] = Date['time'].replace(to_replace='24:00:00', value= '0:00:00')
@@ -158,7 +158,7 @@ print(type(test_mY), test_mY.shape)
 #======================================== LSTM Structure ========================================#
 #HYPER PARAMETERS
 lookback = 48
-train_episodes = 10
+train_episodes = 20
 lr = 0.008 #0.005 #0.009
 num_layers = 5
 num_hidden = 8
@@ -167,14 +167,11 @@ batch_size = 100
 
 train_batch_size = 500
 train_data = TensorDataset(train_mX, train_mY)
-train_dl = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
+train_dl = DataLoader(train_data, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
 val_batch_size = 300
 val_data = TensorDataset(val_mX, val_mY)
-val_dl = DataLoader(val_data, batch_size=batch_size, shuffle=True, drop_last=True)
-
-test_data = TensorDataset(test_mX, test_mY)
-test_dl = DataLoader(test_data) # batch_size -> terza dimensione
+val_dl = DataLoader(val_data, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
 # Structure
 class MV_LSTM(torch.nn.Module):
@@ -188,9 +185,7 @@ class MV_LSTM(torch.nn.Module):
                                  num_layers = self.n_layers,
                                  batch_first = True)
         # self.dropout = torch.nn.Dropout(drop_prob)
-        # according to pytorch docs LSTM output is
-        # (batch_size,seq_len, num_directions * hidden_size)
-        # when considering batch_first = True
+        # according to pytorch docs LSTM output isn(batch_size,seq_len, num_directions * hidden_size) when considering batch_first = True
         self.l_linear = torch.nn.Linear(self.n_hidden, 1)
 
     def forward(self, x, h):
@@ -232,10 +227,10 @@ mv_net.train()
 
 for t in range(train_episodes):
 
-    h = mv_net.init_hidden(batch_size)  #hidden state is initialized at each epoch
+    h = mv_net.init_hidden(train_batch_size)  #hidden state is initialized at each epoch
     loss = []
     for x, label in train_dl:
-        h = mv_net.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+        h = mv_net.init_hidden(train_batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         h = tuple([each.data for each in h])
         output, h = mv_net(x.float(), h)
         label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
@@ -244,13 +239,13 @@ for t in range(train_episodes):
         loss_c.backward()
         optimizer.step()
         loss.append(loss_c.item())
-    LOSS.append(np.sum(loss) /batch_size)
+    LOSS.append(np.sum(loss)/train_batch_size)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
 
 
     # VALIDATION LOOP
     val_loss =[]
-    h = mv_net.init_hidden(batch_size)
+    h = mv_net.init_hidden(val_batch_size)
     for inputs, labels in val_dl:
         h = tuple([each.data for each in h])
         val_output, h = mv_net(inputs.float(), h)
@@ -258,7 +253,7 @@ for t in range(train_episodes):
         val_loss_c = criterion(val_output, val_labels.float())
         val_loss.append(val_loss_c.item())
     # VAL_LOSS.append(val_loss.item())
-    VAL_LOSS.append(np.sum(val_loss) /batch_size)
+    VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
     #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
 
@@ -269,13 +264,13 @@ plt.plot(LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 10, 1))
+plt.xticks(np.arange(0, 20, 1))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+# plt.savefig('immagini/LSTM/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
@@ -284,9 +279,9 @@ plt.show()
 #=========================================================================================#
 #1h PREDICTION TESTING
 test_data = TensorDataset(test_mX, test_mY)
-test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
+test_dl = DataLoader(test_data, shuffle=False, batch_size=val_batch_size, drop_last=True)
 test_losses = []
-h = mv_net.init_hidden(batch_size)
+h = mv_net.init_hidden(val_batch_size)
 
 
 mv_net.eval()
@@ -325,7 +320,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini_LSTM/first_model_error.png')
+#plt.savefig('immagini/LSTM/first_model_error({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
@@ -339,7 +334,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/I_LSTM_real_VS_predicted_temperature(10_epochs).png')
+#plt.savefig('immagini/LSTM/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
@@ -364,7 +359,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
+#plt.savefig('immagini/LSTM/LSTM_prediction_distribution({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
@@ -375,7 +370,7 @@ def freeze_params(model):
     for param_c in model.l_lstm.parameters():
             param_c.requires_grad = False
     for param_fc in model.l_linear.parameters():
-            param_fc.requires_grad = True
+            param_fc.requires_grad = False
     return model
 
 # for param_c in mv_net.l_lstm.parameters():
@@ -397,9 +392,7 @@ num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
     nn.Linear(num_ftrs, 5),
     nn.ReLU(),
-    nn.Linear(5, 3),
-    nn.ReLU(),
-    nn.Linear(3, 1)
+    nn.Linear(5, 1)
 )
 
 print(lstm_test)
@@ -418,14 +411,14 @@ from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test
 #New Dataloaders
 train_batch_size = 500
 train_data_new = TensorDataset(train_mX_new, train_mY_new)
-train_dl_new = DataLoader(train_data_new, batch_size=batch_size, shuffle=True, drop_last=True)
+train_dl_new = DataLoader(train_data_new, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
 val_batch_size = 300
 val_data_new = TensorDataset(val_mX_new, val_mY_new)
-val_dl_new = DataLoader(val_data_new, batch_size=batch_size, shuffle=True, drop_last=True)
+val_dl_new = DataLoader(val_data_new, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
 test_data_new = TensorDataset(test_mX_new, test_mY_new)
-test_dl_new = DataLoader(test_data_new, batch_size=batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
+test_dl_new = DataLoader(test_data_new, batch_size=val_batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
 
 LOSS = []
 VAL_LOSS = []
@@ -435,10 +428,10 @@ lstm_test.train()
 
 for t in range(train_episodes):
 
-    h = lstm_test.init_hidden(batch_size)  #hidden state is initialized at each epoch
+    h = lstm_test.init_hidden(train_batch_size)  #hidden state is initialized at each epoch
     loss = []
     for x, label in train_dl_new:
-        h = lstm_test.init_hidden(batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+        h = lstm_test.init_hidden(train_batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
         h = tuple([each.data for each in h])
         output, h = lstm_test(x.float(), h)
         label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
@@ -447,13 +440,13 @@ for t in range(train_episodes):
         loss_c.backward()
         optimizer.step()
         loss.append(loss_c.item())
-    LOSS.append(np.sum(loss) /batch_size)
+    LOSS.append(np.sum(loss) /train_batch_size)
     # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
     lr_scheduler.step()
 
     # VALIDATION LOOP
     val_loss = []
-    h = lstm_test.init_hidden(batch_size)
+    h = lstm_test.init_hidden(val_batch_size)
     for inputs, labels in val_dl_new:
         h = tuple([each.data for each in h])
         val_output, h = lstm_test(inputs.float(), h)
@@ -461,7 +454,7 @@ for t in range(train_episodes):
         val_loss_c = criterion(val_output, val_labels.float())
         val_loss.append(val_loss_c.item())
     # VAL_LOSS.append(val_loss.item())
-    VAL_LOSS.append(np.sum(val_loss) /batch_size)
+    VAL_LOSS.append(np.sum(val_loss) /val_batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
     #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
 
@@ -478,14 +471,14 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/final_LSTM_Train_VS_Val_LOSS(10_neurons).png')
+# plt.savefig('immagini/LSTM/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(train_episodes))
 plt.show()
 
 #______________________________________TESTING______________________________
 # test_data = TensorDataset(test_mX, test_mY)
 # test_dl = DataLoader(test_data, shuffle=False, batch_size=batch_size, drop_last=True)
 test_losses = []
-h = lstm_test.init_hidden(batch_size)
+h = lstm_test.init_hidden(val_batch_size)
 
 lstm_test.eval()
 ypred = []
@@ -523,7 +516,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini_LSTM/first_model_error.png')
+#plt.savefig('immagini/LSTM/LSTM_tuning_model_error({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
@@ -532,12 +525,12 @@ plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0,right=100)
+plt.xlim(left=0,right=350)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/I_LSTM_real_VS_predicted_temperature(10_epochs).png')
+# plt.savefig('immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
 plt.show()
 
 """
@@ -562,7 +555,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
+# plt.savefig('immagini/LSTM/LSTM_tuning_prediction_distribution({}_epochs).png'.format(train_episodes))
 plt.show()
 
 
