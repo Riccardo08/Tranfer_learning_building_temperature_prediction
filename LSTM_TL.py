@@ -394,7 +394,7 @@ for x in lstm_test.l_linear.parameters():
 lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 #lstm_test.l_lstm.lstm_h = nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True)
 
-
+"""
 num_ftrs = lstm_test.l_linear.in_features
 lstm_test.l_linear = nn.Sequential(
     nn.Linear(num_ftrs, 50),
@@ -403,6 +403,7 @@ lstm_test.l_linear = nn.Sequential(
     nn.ReLU(),
     nn.Linear(30, 1)
 )
+"""
 print(lstm_test)
 
 # How to delete some layers from the model:
@@ -518,9 +519,9 @@ ylab = np.array(ylab, dtype = float)
 error = []
 error = ypred - ylab
 
-plt.hist(error, 50, linewidth=1.5, edgecolor='black', color='orange')
-plt.xticks(np.arange(-0.4, 0.4, 0.1))
-plt.xlim(-0.4, 0.4)
+plt.hist(error, 100, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
@@ -533,7 +534,7 @@ plt.plot(ylab, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0,right=800)
+plt.xlim(left=0,right=100)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
@@ -541,12 +542,12 @@ plt.legend()
 # plt.savefig('immagini_LSTM/I_LSTM_real_VS_predicted_temperature(10_epochs).png')
 plt.show()
 
-
+"""
 #METRICS
 def mean_absolute_percentage_error(y_true, y_pred):
     y_true, y_pred = np.array(y_true), np.array(y_pred)
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
-
+"""
 MAPE = mean_absolute_percentage_error(ylab, ypred)
 RMSE = mean_squared_error(ylab,ypred)**0.5
 R2 = r2_score(ylab,ypred)
@@ -565,3 +566,5 @@ plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
 # plt.savefig('immagini_LSTM/I_LSTM_prediction_distribution(10_epochs).png')
 plt.show()
+
+
