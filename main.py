@@ -371,7 +371,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini/CONV_Train_VS_Val_LOSS(2000_epochs).png')
+plt.savefig('immagini/CNN_Train_VS_Val_LOSS(200_epochs).png')
 plt.show()
 
 
@@ -410,27 +410,11 @@ ylab = np.reshape(ylab, (-1, 1))
 error = []
 error = ypred - ylab
 
-"""
-#________________________________VERIFICA: ylab == test_mY_____________________________________________
-test_mY_prova = test_mY.numpy()
-for x in range(0, len(test_mY_prova)):
-    test_mY_prova[x] = minT + test_mY_prova[x]*(maxT - minT)
-
-test_mY_prova = np.reshape(test_mY_prova, (-1, 1))
-test_mY_prova = test_mY_prova[:10400]
-
-n=0
-for x in range(0, len(test_mY_prova)):      # --------> n rimane = 0 => i die vettori sono gli stessi
-    if test_mY_prova[x]==test_mY[x]:
-        n += 1
-
-#______________________________________________________________________________________________________
-"""
 
 # Plot the error
 plt.hist(error, 200, linewidth=1.5, edgecolor='black', color='orange')
-plt.xticks(np.arange(-0.4, 0.4, 0.1))
-plt.xlim(-0.4, 0.4)
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
@@ -476,7 +460,7 @@ plt.savefig('immagini/CNN_prediction_distribution.png')
 plt.show()
 
 
-#_____________________________________SAVE_THE_MODEL_____________________________
+#__________________________________________________SAVE_THE_MODEL________________________________________________
 """
 torch.save(cnn_model.state_dict(), "cnn_model_weight.pth")
 loadedmodel = CNN(1, 2)
@@ -490,7 +474,7 @@ def freeze_params(model):
     for param_c in model.conv.parameters():
             param_c.requires_grad = False
     for param_fc in model.fc.parameters():
-            param_fc.requires_grad = True
+            param_fc.requires_grad = False
     return model
 
 cnn_test = freeze_params(cnn_model)
@@ -500,9 +484,8 @@ for i in cnn_test.conv.parameters():
     print(i)
 for x in cnn_test.fc.parameters():
     print(x)
-
+"""
 num_ftrs = cnn_test.fc[0].in_features
-# TODO: Vedere se funziona anche facendo:
 cnn_test.fc = nn.Sequential(
     nn.Linear(num_ftrs, 50),
     nn.ReLU(),
@@ -512,15 +495,18 @@ cnn_test.fc = nn.Sequential(
 )
 print(cnn_test)
 """
+"""
 cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
 cnn_test.fc[1] = nn.ReLU()
 cnn_test.fc[2] = nn.Linear(50, 35)
 cnn_test.fc[3] = nn.ReLU()
-cnn_test.fc[4] = nn.Linear(35, 15)
-cnn_test.fc[5] = nn.ReLU()
-cnn_test.fc[6] = nn.Linear(15, 1)
-print(cnn_test.fc)
 """
+cnn_test.fc[4] = nn.Linear(40, 30)
+cnn_test.fc[5] = nn.ReLU()
+cnn_test.fc[6] = nn.Linear(30, 20)
+cnn_test.fc.add_module('7', nn.ReLU())
+cnn_test.fc.add_module('8', nn.Linear(20, 1))
+print(cnn_test)
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
@@ -530,99 +516,24 @@ optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-#_______________________________________________________________________________________________________________________
-"""
-def train_model(model, criterion, optimizer, scheduler, num_epochs, mode):
-    since = time.time()
 
-    # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
-    # best_acc = 0.0
+TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning')
 
-    # initialize the training loss and the validation loss
-    TRAIN_LOSS = []
-    VAL_LOSS = []
-    val_output_list = []
-    val_labels_list = []
-    running_corrects = 0
-    t = 0
-    v = 0
-    for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 20)
-
-        #_____________________________________TRAINING_LOOP____________________________________________
-        if t == 0:
-            model.train()
-            t += 1
-        loss = []
-        for x, label in train_dl:
-            # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-            # h = tuple([each.data for each in h])
-            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
-            output = model(x)
-            # _, preds = torch.max(output, 1)
-            label = label.unsqueeze(1)
-            loss_c = criterion(output, label.float())
-            optimizer.zero_grad()
-            # if epoch == 1:
-            # loss_c.backward(retain_graph=True)
-            # else:
-            loss_c.backward()
-            optimizer.step()
-            loss.append(loss_c.item())
-            # running_corrects += torch.sum(preds == label.data) aggiustare: non sarà mai uguale perchè non si tratta di una classificazione
-        TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
-        if mode == 'tuning':
-            scheduler.step()
-
-        # epoch_acc = running_corrects.double() / len(train_mX)
-        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-
-        #________________________________________VALIDATION LOOP_______________________________________
-        if v == 0:
-            model.eval()
-            v += 1
-        val_loss = []
-        # h = mv_net.init_hidden(batch_size)
-        for inputs, labels in val_dl:
-            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
-            val_output = model(inputs.float())
-            val_labels = labels.unsqueeze(1)
-            val_loss_c = criterion(val_output, val_labels.float())
-            # VAL_LOSS.append(val_loss.item())
-            val_loss.append(val_loss_c.item())
-            val_output_list.append(val_output)
-            val_labels_list.append(val_labels)
-        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
-        # print('Epoch : ', epoch, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-        
-        # if epoch_acc > best_acc:
-        #     best_acc = epoch_acc
-        #     best_model_wts = copy.deepcopy(model.state_dict())
-        
-    time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    # print('Best val Acc: {:4f}'.format(best_acc))
-    # load best model weights
-    # model.load_state_dict(best_model_wts)
-    return TRAIN_LOSS, VAL_LOSS
-"""
-
-TRAIN_LOSS, VAL_LOSS = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=150, mode='tuning')
-
+#TODO: far partire il seguente grafico da 0.00
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(VAL_LOSS,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
+plt.ylim(bottom=0)
 # plt.xticks(np.arange(0, epochs, 1))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini_LSTM/I_LSTM_Train_VS_Val_LOSS(10_epochs).png')
+# plt.savefig('immagini/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
 plt.show()
 
 
