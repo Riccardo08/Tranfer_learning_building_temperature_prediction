@@ -519,7 +519,6 @@ lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning')
 
-#TODO: far partire il seguente grafico da 0.00
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(TRAIN_LOSS,'--',color='r', linewidth = 1, label = 'Train Loss')
