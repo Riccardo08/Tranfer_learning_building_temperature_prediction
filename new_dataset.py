@@ -99,8 +99,8 @@ def split_sequences(sequences, n_steps):
 l_train = int(0.8 * len(multi_norm))
 l_train_m = int(0.8 * l_train)# training length
 # l_val_m = int(0.2*l_train)# validation length
-maxT = multi_norm['random_temp'].max()  # max value
-minT = multi_norm['random_temp'].min()  # max value
+maxT = df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'].max()  # max value
+minT = df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'].min()  # max value
 
 
 def multi_shift(df, col_name):
