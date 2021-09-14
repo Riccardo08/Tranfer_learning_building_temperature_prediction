@@ -120,9 +120,9 @@ def multi_shift(df, col_name):
 
 period = shifting_period
 train_mx, test_mx, val_mx = multi_shift(multi_norm, col_name='random_temp')
-train_my = multi_norm['random_temp'][1:l_train_m]
-val_my = multi_norm['random_temp'][l_train_m+1:l_train]
-test_my = multi_norm['random_temp'][l_train+1:]
+train_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][1:l_train_m]-minT)/(maxT-minT)
+val_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][l_train_m+1:l_train]-minT)/(maxT-minT)
+test_my = (df['CORE_ZN:Zone Mean Air Temperature [C](TimeStep)'][l_train+1:]-minT)/(maxT-minT)
 test_my = test_my.reset_index(drop=True)
 test_mx = test_mx.reset_index(drop=True)
 val_my = val_my.reset_index(drop=True)
