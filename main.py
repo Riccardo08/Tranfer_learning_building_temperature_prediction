@@ -371,7 +371,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-plt.savefig('immagini/CNN_Train_VS_Val_LOSS(200_epochs).png')
+plt.savefig('immagini/CNN/CNN_Train_VS_Val_LOSS(200_epochs).png')
 plt.show()
 
 
@@ -432,7 +432,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('immagini/CNN_real_VS_predicted_temperature.png')
+plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
 plt.show()
 
 
@@ -456,7 +456,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('immagini/CNN_prediction_distribution.png')
+plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
 plt.show()
 
 
@@ -533,7 +533,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
+# plt.savefig('immagini/CNN/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
 plt.show()
 
 
@@ -580,7 +580,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini/cnn_model_error.png')
+# plt.savefig('immagini/CNN/cnn_model_error.png')
 plt.show()
 
 
@@ -594,7 +594,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('immagini/CNN_real_VS_predicted_temperature.png')
+# plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
 plt.show()
 
 
@@ -618,7 +618,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('immagini/CNN_prediction_distribution.png')
+# plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
 plt.show()
 
 
