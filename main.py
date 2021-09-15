@@ -190,8 +190,6 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.Linear(20, 1)
         )
-
-    # TODO: mettere il flatten al posto del x.view
     def forward(self, x):
         x = self.conv(x)
         # x = self.pool2(F.relu(self.conv3(x)))
@@ -201,7 +199,7 @@ class CNN(nn.Module):
 
 
 #______________________________________________Define_PARAMETERS______________________________________________
-epochs = 200
+epochs = 3
 learning_rate = 0.009
 # batch_size = 100
 train_batch_size = 500
@@ -472,11 +470,12 @@ loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 #_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
 def freeze_params(model):
     for param_c in model.conv.parameters():
-            param_c.requires_grad = False
+            param_c.requires_grad = True
     for param_fc in model.fc.parameters():
             param_fc.requires_grad = False
     return model
 
+#TODO: add.optimizer
 cnn_test = freeze_params(cnn_model)
 
 print(cnn_test)
@@ -484,7 +483,7 @@ for i in cnn_test.conv.parameters():
     print(i)
 for x in cnn_test.fc.parameters():
     print(x)
-"""
+
 num_ftrs = cnn_test.fc[0].in_features
 cnn_test.fc = nn.Sequential(
     nn.Linear(num_ftrs, 50),
@@ -494,7 +493,7 @@ cnn_test.fc = nn.Sequential(
     nn.Linear(35, 1)
 )
 print(cnn_test)
-"""
+
 """
 cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
 cnn_test.fc[1] = nn.ReLU()
@@ -533,7 +532,7 @@ test_data_new = TensorDataset(test_mX_new, test_mY_new)
 test_dl_new = DataLoader(test_data_new, batch_size=test_batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
 
 #_TRAIN_THE_MODEL_________________________________________________________________________________
-TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=200, mode='tuning', train_dataloader=train_dl_new, val_dataloader=val_dl_new)
+TRAIN_LOSS_NEW, VAL_LOSS_NEW = train_model(cnn_test, criterion_ft, optimizer_ft, lr_scheduler, num_epochs=10, mode='tuning', train_dataloader=train_dl_new, val_dataloader=val_dl_new)
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
