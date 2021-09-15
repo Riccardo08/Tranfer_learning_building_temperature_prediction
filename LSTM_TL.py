@@ -158,7 +158,7 @@ print(type(test_mY), test_mY.shape)
 #======================================== LSTM Structure ========================================#
 #HYPER PARAMETERS
 lookback = 48
-train_episodes = 20
+train_episodes = 3
 lr = 0.008 #0.005 #0.009
 num_layers = 5
 num_hidden = 8
