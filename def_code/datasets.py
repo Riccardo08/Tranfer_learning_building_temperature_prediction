@@ -43,7 +43,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 # Read files
 def read_csv(directory, file_csv):
-    file = pd.read_csv('datasets/'+directory+'/'+file_csv, encoding='latin1')
+    file = pd.read_csv(directory+'/'+file_csv, encoding='latin1')
     return file
 
 # Medium_office
