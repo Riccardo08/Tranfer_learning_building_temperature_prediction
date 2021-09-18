@@ -43,7 +43,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 # Read files
 def read_csv(directory, file_csv):
-    file = pd.read_csv(directory+'/'+file_csv, encoding='latin1')
+    file = pd.read_csv('def_code/datasets/'+directory+'/'+file_csv, encoding='latin1')
     return file
 
 # Medium_office
@@ -92,11 +92,49 @@ small_office = concat_datasets(list=[small_office_100, small_office_100_random_p
 restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns, name=restaurant)
 retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns, name=restaurant)
 
+"""
+def visualization(dataset, column):
+    len_f = 0
+    for i in range(12):
+        len_i = len_f * 976
+        len_f = 976 * (i+1)
+        fig, axs = plt.subplots(3, 4, figsize=(40,20))
+        if i==0:
+            axs[i].plot(dataset[column][0:976])
+        else:
+            axs[i].plot(dataset[column][len_i:len_f])
+    plt.show()
+"""
 
 
+def visualization(dataset, column, dataset_name):
+    fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40,20))
+    ax1.plot(dataset[column][0:976])
+    ax2.plot(dataset[column][976:1952])
+    ax3.plot(dataset[column][1952:2928])
+    ax4.plot(dataset[column][2928:3904])
+    ax5.plot(dataset[column][3904:4880])
+    ax6.plot(dataset[column][4880:5856])
+    ax7.plot(dataset[column][5856:6832])
+    ax8.plot(dataset[column][6832:7808])
+    ax9.plot(dataset[column][7808:8784])
+    ax10.plot(dataset[column][8784:9760])
+    ax11.plot(dataset[column][9760:10736])
+    ax12.plot(dataset[column][10736:11712])
+    fig.suptitle(dataset_name+': '+column, size=50)
+    plt.show()
 
+# Plot mean air temperature
+visualization(medium_office, 'Mean air Temperature [°C]', dataset_name='Medium office')
+visualization(small_office, 'Mean air Temperature [°C]', dataset_name='Small office')
+visualization(restaurant, 'Mean air Temperature [°C]', dataset_name='Restaurant')
+visualization(retail, 'Mean air Temperature [°C]', dataset_name='Retail')
 
-
+# Plot the total cooling rate
+visualization(medium_office, 'Total Cooling Rate [W]', dataset_name='Medium office')
+visualization(small_office, 'Total Cooling Rate [W]', dataset_name='Small office')
+visualization(restaurant, 'Total Cooling Rate [W]', dataset_name='Restaurant')
+visualization(retail, 'Total Cooling Rate [W]', dataset_name='Retail')
 
 
 
