@@ -91,8 +91,10 @@ small_office = concat_datasets(list=[small_office_100, small_office_100_random_p
 # restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns, name=restaurant)
 # retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns, name=restaurant)
 
-maxT = medium_office['Mean air Temperature [°C]'].max()
-minT = medium_office['Mean air Temperature [°C]'].min()
+maxT_m = medium_office['Mean air Temperature [°C]'].max()
+minT_m = medium_office['Mean air Temperature [°C]'].min()
+maxT_s = small_office['Mean air Temperature [°C]'].max()
+minT_s = small_office['Mean air Temperature [°C]'].min()
 
 def normalization(df):
     df = (df - df.min()) / (df.max() - df.min())
@@ -243,10 +245,10 @@ print(type(test_sY), test_sY.shape)
 #======================================== LSTM Structure ========================================#
 #HYPER PARAMETERS
 lookback = 48
-train_episodes = 40
+# train_episodes = 25
 lr = 0.008 #0.005 #0.009
 num_layers = 5
-num_hidden = 8
+num_hidden = 15
 batch_size = 100
 
 
@@ -271,8 +273,13 @@ class MV_LSTM(torch.nn.Module):
                                  batch_first = True)
         # self.dropout = torch.nn.Dropout(drop_prob)
         # according to pytorch docs LSTM output isn(batch_size,seq_len, num_directions * hidden_size) when considering batch_first = True
-        self.l_linear = torch.nn.Linear(self.n_hidden, 1)
-
+        self.l_linear = torch.nn.Sequential(
+            nn.Linear(self.n_hidden, 10),
+            nn.ReLU(),
+            nn.Linear(10, 5),
+            nn.ReLU(),
+            nn.Linear(5, 1)
+        )
     def forward(self, x, h):
         batch_size, seq_len, _ = x.size()
         # hidden_state = torch.zeros(self.n_layers, batch_size, self.n_hidden)
@@ -300,18 +307,18 @@ n_timesteps = lookback
 
 #initialize the network,criterion and optimizer
 lstm = MV_LSTM(n_features, n_timesteps)
-criterion = torch.nn.MSELoss() # reduction='sum' created huge loss value
-optimizer = torch.optim.Adam(lstm.parameters(), lr=lr)
+criterion_m = torch.nn.MSELoss() # reduction='sum' created huge loss value
+optimizer_m = torch.optim.Adam(lstm.parameters(), lr=lr)
 
 
-def train_model(model, train_dl, val_dl):
+def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
     # START THE TRAINING PROCESS
     model.train()
     # initialize the training loss and the validation loss
     TRAIN_LOSS = []
     VAL_LOSS = []
 
-    for t in range(train_episodes):
+    for t in range(epochs):
 
         # TRAINING LOOP
         loss = []
@@ -327,6 +334,8 @@ def train_model(model, train_dl, val_dl):
             optimizer.step()
             loss.append(loss_c.item())
         TRAIN_LOSS.append(np.sum(loss)/train_batch_size)
+        if mode == 'tuning':
+            lr_scheduler.step()
         # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
 
         # VALIDATION LOOP
@@ -344,7 +353,7 @@ def train_model(model, train_dl, val_dl):
 
     return TRAIN_LOSS, VAL_LOSS
 
-train_loss, val_loss = train_model(lstm, train_dl_m, val_dl_m)
+train_loss_m, val_loss_m = train_model(lstm, 60, train_dl_m, val_dl_m, optimizer_m, criterion_m)
 
 """
 for t in range(train_episodes):
@@ -381,11 +390,11 @@ for t in range(train_episodes):
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(train_loss,'--',color='r', linewidth = 1, label = 'Train Loss')
-plt.plot(val_loss,color='b', linewidth = 1, label = 'Validation Loss')
+plt.plot(train_loss_m,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(val_loss_m,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 40, 1))
+plt.xticks(np.arange(0, 60, 1))
 #plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 # plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -403,17 +412,18 @@ test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=val_batch_size, dr
 test_losses = []
 # h = lstm.init_hidden(val_batch_size)
 
-def test_model(model, test_dl):
-    h = lstm.init_hidden(val_batch_size)
+def test_model(model, test_dl, maxT, minT):
+    h = model.init_hidden(val_batch_size)
     model.eval()
-    y_pred=[]
-    y_lab=[]
+    y_pred = []
+    y_lab = []
 
     for inputs, labels in test_dl:
         h = tuple([each.data for each in h])
         test_output, h = model(inputs.float(), h)
         labels = labels.unsqueeze(1)
         test_output = test_output.detach().numpy()
+
         #RESCALE OUTPUT
         test_output = np.reshape(test_output, (-1, 1))
         test_output = minT + test_output*(maxT-minT)
@@ -427,7 +437,7 @@ def test_model(model, test_dl):
         y_lab.append(labels)
     return y_pred, y_lab
 
-y_pred_m, y_lab_m = test_model(lstm, test_dl_m)
+y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
@@ -486,6 +496,151 @@ plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
 #plt.savefig('immagini/LSTM/LSTM_prediction_distribution({}_epochs).png'.format(train_episodes))
 plt.show()
+
+
+
+
+
+#_____________________________________________________TUNING_PHASE_______________________________________________
+def freeze_params(model):
+    for param_c in model.l_lstm.parameters():
+            param_c.requires_grad = False
+    for param_fc in model.l_linear.parameters():
+            param_fc.requires_grad = False
+    return model
+
+# for param_c in mv_net.l_lstm.parameters():
+#     print(param_c)
+
+lstm_test = freeze_params(lstm)
+
+print(lstm_test)
+for i in lstm_test.l_lstm.parameters():
+    print(i)
+for x in lstm_test.l_linear.parameters():
+    print(x)
+
+#____________________ADD MODULES_____________________________________________________________________________
+# lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
+
+num_out_ftrs = lstm_test.l_linear[0].out_features
+
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 4)
+lstm_test.l_linear[3] = nn.ReLU()
+lstm_test.l_linear[4] = nn.Linear(4, 1)
+
+print(lstm_test)
+for i in lstm_test.l_lstm.parameters():
+    print(i)
+for x in lstm_test.l_linear.parameters():
+    print(x)
+
+
+#__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
+# from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+
+train_batch_size = 500
+train_data_s = TensorDataset(train_sX, train_sY)
+train_dl_s = DataLoader(train_data_s, batch_size=train_batch_size, shuffle=True, drop_last=True)
+
+val_batch_size = 200
+val_data_s = TensorDataset(val_sX, val_sY)
+val_dl_s = DataLoader(val_data_s, batch_size=val_batch_size, shuffle=True, drop_last=True)
+
+
+#generalize the number of features and the number of timesteps by linking them to the preprocessing
+n_features = train_sX.shape[2]
+n_timesteps = lookback
+
+#initialize the network,criterion and optimizer
+# lstm = MV_LSTM(n_features, n_timesteps)
+criterion_ft = torch.nn.MSELoss()
+# optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.004)
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+# TRAINING TUNING MODEL
+train_loss_s, val_loss_s = train_model(lstm_test, 50, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
+
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(train_loss_s, '--', color='r', linewidth=1, label='Train Loss')
+plt.plot(val_loss_s, color='b', linewidth=1, label='Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+plt.xticks(np.arange(0, 50, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini/LSTM/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(train_episodes))
+plt.show()
+
+#______________________________________TESTING______________________________
+
+test_data_s = TensorDataset(test_sX, test_sY)
+test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=val_batch_size, drop_last=True)
+test_losses_s = []
+# h = lstm.init_hidden(val_batch_size)
+
+y_pred_s, y_lab_s = test_model(lstm_test, test_dl_s, maxT_s, minT_s)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+y_pred_s = flatten(y_pred_s)
+y_lab_s = flatten(y_lab_s)
+y_pred_s = np.array(y_pred_s, dtype=float)
+y_lab_s = np.array(y_lab_s, dtype = float)
+
+
+error_s = []
+error_s = y_pred_s - y_lab_s
+
+plt.hist(error_s, 100, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-1, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+#plt.savefig('immagini/LSTM/LSTM_tuning_model_error({}_epochs).png'.format(train_episodes))
+plt.show()
+
+
+plt.plot(y_pred_s, color='orange', label="Predicted")
+plt.plot(y_lab_s, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=0,right=350)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+# plt.savefig('immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
+plt.show()
+
+
+MAPE = mean_absolute_percentage_error(y_lab_s, y_pred_s)
+RMSE = mean_squared_error(y_lab_s, y_pred_s)**0.5
+R2 = r2_score(y_lab_s, y_pred_s)
+
+print('MAPE:%0.5f%%'%MAPE)
+print('RMSE:', RMSE.item())
+print('R2:', R2.item())
+
+
+plt.scatter(y_lab_s, y_pred_s,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+# plt.savefig('immagini/LSTM/LSTM_tuning_prediction_distribution({}_epochs).png'.format(train_episodes))
+plt.show()
+
+
 
 
 
