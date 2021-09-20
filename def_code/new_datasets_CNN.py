@@ -256,10 +256,10 @@ class CNN(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size),
             nn.ReLU(),
-            nn.MaxPool1d(2),
+            nn.AvgPool1d(2),
             nn.Conv1d(self.out_channel, 1, self.kernel_size),
             nn.ReLU(),
-            nn.MaxPool1d(2),
+            nn.AvgPool1d(2),
             # nn.Conv1d(1, 1, self.kernel_size),
             # nn.ReLU(),
             # nn.MaxPool1d(2)
@@ -271,7 +271,9 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.Linear(30, 20),
             nn.ReLU(),
-            nn.Linear(20, 1)
+            nn.Linear(20, 10),
+            nn.ReLU(),
+            nn.Linear(10, 1)
         )
     def forward(self, x):
         x = self.conv(x)
@@ -284,7 +286,7 @@ class CNN(nn.Module):
 
 #______________________________________________Define_PARAMETERS______________________________________________
 epochs = 100
-learning_rate = 0.009
+learning_rate = 0.008
 in_channels = 1
 out_channels = 2
 # batch_size = 100
@@ -295,6 +297,7 @@ test_batch_size = 200
 # Define model, criterion and optimizer:
 cnn = CNN(in_channels, out_channels)
 criterion_m = torch.nn.MSELoss()
+# optimizer_m = torch.optim.SGD(cnn.parameters(), lr=learning_rate)
 optimizer_m = torch.optim.SGD(cnn.parameters(), lr=learning_rate)
 
 
@@ -305,18 +308,13 @@ train_dl_m = DataLoader(train_data_m, batch_size=train_batch_size, shuffle=True,
 val_data_m = TensorDataset(val_mX, val_mY)
 val_dl_m = DataLoader(val_data_m, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
-# Initialize the training loss and the validation loss
-LOSS = []
-VAL_LOSS = []
-val_output_list = []
-val_labels_list = []
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_dl, val_dl):
+def train_model(model, criterion, optimizer, num_epochs, train_dl, val_dl, mode=''):
     since = time.time()
 
     # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
     # best_acc = 0.0
-
+    model.train()
     # initialize the training loss and the validation loss
     TRAIN_LOSS = []
     VAL_LOSS = []
@@ -327,11 +325,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 20)
-
         #_____________________________________TRAINING_LOOP____________________________________________
-        if t == 0:
-            model.train()
-            t += 1
         loss = []
         for x, label in train_dl:
             # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
@@ -347,7 +341,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_
             loss.append(loss_c.item())
         TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
         if mode == 'tuning':
-            scheduler.step()
+            lr_scheduler.step()
 
         #________________________________________VALIDATION LOOP_______________________________________
         val_loss = []
@@ -369,7 +363,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     return TRAIN_LOSS, VAL_LOSS
 
-train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, lr_scheduler, num_epochs=epochs, mode='', train_dl=train_dl_m, val_dl=val_dl_m)
+train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, num_epochs=epochs, train_dl=train_dl_m, val_dl=val_dl_m)
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_m,'--', color='r', linewidth = 1, label = 'Train Loss')
@@ -444,7 +438,7 @@ plt.plot(y_lab_m, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=4500, right=5000)
+plt.xlim(left=0, right=300)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
@@ -475,3 +469,154 @@ plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
 plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
 plt.show()
+
+
+
+
+#_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
+def freeze_params(model):
+    for param_c in model.conv.parameters():
+            param_c.requires_grad = True
+    for param_fc in model.fc.parameters():
+            param_fc.requires_grad = False
+    return model
+
+cnn_test = freeze_params(cnn)
+
+print(cnn_test)
+for i in cnn_test.conv.parameters():
+    print(i)
+for x in cnn_test.fc.parameters():
+    print(x)
+
+num_ftrs = cnn_test.fc[2].out_features
+"""
+cnn_test.fc = nn.Sequential(
+    nn.Linear(num_ftrs, 50),
+    nn.ReLU(),
+    nn.Linear(50, 35),
+    nn.ReLU(),
+    nn.Linear(35, 1)
+)
+print(cnn_test)
+"""
+
+cnn_test.fc[4] = nn.Linear(num_ftrs, 10)
+cnn_test.fc[5] = nn.ReLU()
+cnn_test.fc[6] = nn.Linear(10, 5)
+cnn_test.fc.add_module('7', nn.ReLU())
+cnn_test.fc.add_module('8', nn.Linear(5, 1))
+print(cnn_test)
+# How to delete some layers from the model:
+# cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
+
+criterion_ft = torch.nn.MSELoss()
+# optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
+optimizer_ft = optim.SGD(filter(lambda p: p.requires_grad, cnn_test.parameters()), lr=0.002)
+
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+
+
+#__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
+# from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+
+#New Dataloaders
+train_batch_size = 500
+train_data_s = TensorDataset(train_sX, train_sY)
+train_dl_s = DataLoader(train_data_s, batch_size=train_batch_size, shuffle=True, drop_last=True)
+
+val_batch_size = 300
+val_data_s = TensorDataset(val_sX, val_sY)
+val_dl_s = DataLoader(val_data_s, batch_size=val_batch_size, shuffle=True, drop_last=True)
+
+#_TRAIN_THE_MODEL_________________________________________________________________________________
+train_loss_s, val_loss_s = train_model(cnn_test, criterion_ft, optimizer_ft, 50, train_dl=train_dl_s, val_dl=val_dl_s, mode='tuning')
+
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(train_loss_s,'--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(val_loss_s,color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+plt.ylim(bottom=0)
+# plt.xticks(np.arange(0, epochs, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+# plt.savefig('immagini/CNN/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
+plt.show()
+
+
+#_________________________________________________TESTING_PHASE_______________________________________________
+# loadedmodel.eval()
+test_data_s = TensorDataset(test_sX, test_sY)
+test_dl_s = DataLoader(test_data_s, batch_size=test_batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
+
+
+y_pred_s, y_lab_s = test_model(cnn_test, test_dl_s)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+y_pred_s = flatten(y_pred_s)
+y_lab_s = flatten(y_lab_s)
+y_pred_s = np.array(y_pred_s, dtype=float)
+y_lab_s = np.array(y_lab_s, dtype=float)
+y_pred_s = np.reshape(y_pred_s, (-1, 1))
+y_lab_s = np.reshape(y_lab_s, (-1, 1))
+
+error_s = []
+error_s = y_pred_s - y_lab_s
+
+
+# Plot the error
+plt.hist(error_s, 200, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini/CNN/cnn_model_error.png')
+plt.show()
+
+
+plt.plot(y_pred_s, color='orange', label="Predicted")
+plt.plot(y_lab_s, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=4500, right=5000)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+# plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
+plt.show()
+
+
+#______________________________METRICS_EVALUATION___________________________________________________
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+MAPE = mean_absolute_percentage_error(y_lab_s, y_pred_s)
+RMSE=mean_squared_error(y_lab_s, y_pred_s)**0.5
+R2 = r2_score(y_lab_s, y_pred_s)
+
+print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
+print('RMSE:%0.5f'%RMSE.item()) # RMSE values between 0.2 and 0.5 shows that the model can relatively predict the data accurately.
+print('R2:%0.5f'%R2.item())     # R-squared more than 0.75 is a very good value for showing the accuracy.
+
+plt.scatter(y_lab_s, y_pred_s,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+# plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
+plt.show()
+
+
+
