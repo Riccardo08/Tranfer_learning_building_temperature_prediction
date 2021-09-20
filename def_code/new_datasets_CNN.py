@@ -471,8 +471,6 @@ plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
 plt.show()
 
 
-
-
 #_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
 def freeze_params(model):
     for param_c in model.conv.parameters():
@@ -490,16 +488,6 @@ for x in cnn_test.fc.parameters():
     print(x)
 
 num_ftrs = cnn_test.fc[2].out_features
-"""
-cnn_test.fc = nn.Sequential(
-    nn.Linear(num_ftrs, 50),
-    nn.ReLU(),
-    nn.Linear(50, 35),
-    nn.ReLU(),
-    nn.Linear(35, 1)
-)
-print(cnn_test)
-"""
 
 cnn_test.fc[4] = nn.Linear(num_ftrs, 10)
 cnn_test.fc[5] = nn.ReLU()
