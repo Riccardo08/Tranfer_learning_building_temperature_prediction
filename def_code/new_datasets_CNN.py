@@ -57,6 +57,7 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
+
 """
 # Restaurant
 restaurant_100 = read_csv(directory='restaurant', file_csv='Restaurant_100.csv')
@@ -238,3 +239,239 @@ print(type(val_sX), val_sX.shape)
 print(type(val_sY), val_sY.shape)
 print(type(test_sX), test_sX.shape)
 print(type(test_sY), test_sY.shape)
+
+
+
+
+#_________________________________________________CNN_MODEL_____________________________________________________
+class CNN(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super(CNN, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = 2
+        self.pad = 0
+        self.dil = 1
+        self.str = 1
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Conv1d(self.out_channel, 1, self.kernel_size),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            # nn.Conv1d(1, 1, self.kernel_size),
+            # nn.ReLU(),
+            # nn.MaxPool1d(2)
+        )
+        self.fc = nn.Sequential(
+            nn.Linear(in_features=59, out_features=40),  # need to change the input (20).
+            nn.ReLU(),
+            nn.Linear(40, 30),
+            nn.ReLU(),
+            nn.Linear(30, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1)
+        )
+    def forward(self, x):
+        x = self.conv(x)
+        # x = self.pool2(F.relu(self.conv3(x)))
+        # x = nn.flatten(x, 1, -1)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
+
+
+#______________________________________________Define_PARAMETERS______________________________________________
+epochs = 100
+learning_rate = 0.009
+in_channels = 1
+out_channels = 2
+# batch_size = 100
+train_batch_size = 500
+val_batch_size = 150
+test_batch_size = 200
+
+# Define model, criterion and optimizer:
+cnn = CNN(in_channels, out_channels)
+criterion_m = torch.nn.MSELoss()
+optimizer_m = torch.optim.SGD(cnn.parameters(), lr=learning_rate)
+
+
+# Dataloaders:
+train_data_m = TensorDataset(train_mX, train_mY)
+train_dl_m = DataLoader(train_data_m, batch_size=train_batch_size, shuffle=True, drop_last=True)
+
+val_data_m = TensorDataset(val_mX, val_mY)
+val_dl_m = DataLoader(val_data_m, batch_size=val_batch_size, shuffle=True, drop_last=True)
+
+# Initialize the training loss and the validation loss
+LOSS = []
+VAL_LOSS = []
+val_output_list = []
+val_labels_list = []
+
+def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_dl, val_dl):
+    since = time.time()
+
+    # best_model_wts = copy.deepcopy(model.state_dict())  # 'state_dict' mappa ogni layer col suo tensore dei parametri
+    # best_acc = 0.0
+
+    # initialize the training loss and the validation loss
+    TRAIN_LOSS = []
+    VAL_LOSS = []
+    val_output_list = []
+    val_labels_list = []
+    running_corrects = 0
+    t = 0
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 20)
+
+        #_____________________________________TRAINING_LOOP____________________________________________
+        if t == 0:
+            model.train()
+            t += 1
+        loss = []
+        for x, label in train_dl:
+            # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
+            # h = tuple([each.data for each in h])
+            x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
+            output = model(x)
+            # _, preds = torch.max(output, 1)
+            label = label.unsqueeze(1)
+            loss_c = criterion(output, label.float())
+            optimizer.zero_grad()
+            loss_c.backward()
+            optimizer.step()
+            loss.append(loss_c.item())
+        TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
+        if mode == 'tuning':
+            scheduler.step()
+
+        #________________________________________VALIDATION LOOP_______________________________________
+        val_loss = []
+        # h = mv_net.init_hidden(batch_size)
+        for inputs, labels in val_dl:
+            inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
+            val_output = model(inputs.float())
+            val_labels = labels.unsqueeze(1)
+            val_loss_c = criterion(val_output, val_labels.float())
+            # VAL_LOSS.append(val_loss.item())
+            val_loss.append(val_loss_c.item())
+            val_output_list.append(val_output)
+            val_labels_list.append(val_labels)
+        VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
+
+        print('Epoch : ', epoch, 'Training Loss : ', TRAIN_LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
+
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    return TRAIN_LOSS, VAL_LOSS
+
+train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, lr_scheduler, num_epochs=epochs, mode='', train_dl=train_dl_m, val_dl=val_dl_m)
+
+#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(train_loss_m,'--', color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(val_loss_m, color='b', linewidth = 1, label = 'Validation Loss')
+plt.ylabel('Loss (MSE)')
+plt.xlabel('Epoch')
+# plt.xticks(np.arange(0, epochs, 1))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+plt.savefig('immagini/CNN/CNN_Train_VS_Val_LOSS(200_epochs).png')
+plt.show()
+
+
+#_________________________________________________TESTING_PHASE_______________________________________________
+
+test_data_m = TensorDataset(test_mX, test_mY)
+test_dl_m = DataLoader(test_data_m, batch_size=test_batch_size, drop_last=True)
+
+def test_model(model, test_dl):
+    model.eval()
+    test_losses = []
+    y_pred = []
+    y_lab = []
+
+    for inputs, labels in test_dl:
+        inputs = torch.reshape(inputs, (test_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
+        outputs = model(inputs.float())
+        #outputs = outputs.detach().numpy()
+        #outputs = np.reshape(outputs, (-1, 1))
+        outputs = minT + outputs*(maxT-minT)
+
+        labs = labels.unsqueeze(1)
+        # labs = labs.float()
+        #labels = labs.detach().numpy()
+        #labs = np.reshape(labs, (-1, 1))
+        labs = minT + labs*(maxT-minT)
+
+        y_pred.append(outputs)
+        y_lab.append(labs)
+    return y_pred, y_lab
+
+
+y_pred_m, y_lab_m = test_model(cnn, test_dl_m)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+y_pred_m = flatten(y_pred_m)
+y_lab_m = flatten(y_lab_m)
+y_pred_m = np.array(y_pred_m, dtype=float)
+y_lab_m = np.array(y_lab_m, dtype=float)
+y_pred_m = np.reshape(y_pred_m, (-1, 1))
+y_lab_m = np.reshape(y_lab_m, (-1, 1))
+
+error_m = []
+error_m = y_pred_m - y_lab_m
+
+# Plot the error
+plt.hist(error_m, 200, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-0.6, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
+plt.title('First model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+# plt.savefig('immagini/cnn_model_error.png')
+plt.show()
+
+
+plt.plot(y_pred_m, color='orange', label="Predicted")
+plt.plot(y_lab_m, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=4500, right=5000)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Real VS predicted temperature", size=15)
+plt.legend()
+plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
+plt.show()
+
+
+#______________________________METRICS_EVALUATION___________________________________________________
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+MAPE = mean_absolute_percentage_error(y_lab_m, y_pred_m)
+RMSE=mean_squared_error(y_lab_m, y_pred_m)**0.5
+R2 = r2_score(y_lab_m, y_pred_m)
+
+print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
+print('RMSE:%0.5f'%RMSE.item()) # RMSE values between 0.2 and 0.5 shows that the model can relatively predict the data accurately.
+print('R2:%0.5f'%R2.item())     # R-squared more than 0.75 is a very good value for showing the accuracy.
+
+plt.scatter(y_lab_m, y_pred_m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Prediction distribution", size=15)
+plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
+plt.show()
