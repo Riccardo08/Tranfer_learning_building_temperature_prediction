@@ -108,7 +108,7 @@ def visualization(dataset, column):
             axs[i].plot(dataset[column][len_i:len_f])
     plt.show()
 """
-"""
+
 def visualization(dataset, column, dataset_name):
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
     ax1.plot(dataset[column][0:976])
@@ -177,7 +177,7 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 
 column = 'Total Cooling Rate [W]'
 bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
-"""
+
 """
 def view_boxplot(df, column, by, title):
     df.boxplot(by=by, column=column, grid=False)
@@ -422,38 +422,6 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 epochs_m = 60
 train_loss_m, val_loss_m = train_model(lstm, epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m, optimizer=optimizer_m, criterion=criterion_m)
 
-"""
-for t in range(train_episodes):
-
-    h = mv_net.init_hidden(train_batch_size)  #hidden state is initialized at each epoch
-    loss = []
-    for x, label in train_dl:
-        h = mv_net.init_hidden(train_batch_size) #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-        h = tuple([each.data for each in h])
-        output, h = mv_net(x.float(), h)
-        label = label.unsqueeze(1) #utilizzo .unsqueeze per non avere problemi di dimensioni
-        loss_c = criterion(output, label.float())
-        optimizer.zero_grad()
-        loss_c.backward()
-        optimizer.step()
-        loss.append(loss_c.item())
-    LOSS.append(np.sum(loss)/train_batch_size)
-    # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-
-
-    # VALIDATION LOOP
-    val_loss =[]
-    h = mv_net.init_hidden(val_batch_size)
-    for inputs, labels in val_dl:
-        h = tuple([each.data for each in h])
-        val_output, h = mv_net(inputs.float(), h)
-        val_labels = labels.unsqueeze(1)
-        val_loss_c = criterion(val_output, val_labels.float())
-        val_loss.append(val_loss_c.item())
-    # VAL_LOSS.append(val_loss.item())
-    VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
-    print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-"""
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_m,'--',color='r', linewidth = 1, label = 'Train Loss')
