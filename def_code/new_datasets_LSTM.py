@@ -57,7 +57,7 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
-"""
+
 # Restaurant
 restaurant_100 = read_csv(directory='restaurant', file_csv='Restaurant_100.csv')
 restaurant_100_potenza_random_60_percento = read_csv(directory='restaurant', file_csv='Restaurant_100_potenza_random_60_percento.csv')
@@ -69,7 +69,7 @@ retail_100 = read_csv(directory='retail', file_csv='Retail_100.csv')
 retail_100_potenza_random_60_percento = read_csv(directory='retail', file_csv='Retail_100_potenza_random_60_percento.csv')
 retail_105 = read_csv(directory='retail', file_csv='Retail_105.csv')
 retail_random = read_csv(directory='retail', file_csv='Retail_random.csv')
-"""
+
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
@@ -88,22 +88,13 @@ retail = pd.DataFrame()
 
 medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
-# restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns, name=restaurant)
-# retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns, name=restaurant)
+restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
+retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
 
-maxT_m = medium_office['Mean air Temperature [°C]'].max()
-minT_m = medium_office['Mean air Temperature [°C]'].min()
-maxT_s = small_office['Mean air Temperature [°C]'].max()
-minT_s = small_office['Mean air Temperature [°C]'].min()
 
-def normalization(df):
-    df = (df - df.min()) / (df.max() - df.min())
-    # df = (df[col_names] - df[col_names].min()) / (df[col_names].max() - df[col_names].min())
-    return df
+#__________________________________________________PLOTS________________________________________________________________
 
-medium_office = normalization(medium_office)
-small_office = normalization(small_office)
-
+# LINE
 """
 def visualization(dataset, column):
     len_f = 0
@@ -117,7 +108,6 @@ def visualization(dataset, column):
             axs[i].plot(dataset[column][len_i:len_f])
     plt.show()
 """
-
 """
 def visualization(dataset, column, dataset_name):
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
@@ -143,15 +133,94 @@ def visualization(dataset, column, dataset_name):
 # Plot mean air temperature
 visualization(medium_office, 'Mean air Temperature [°C]', dataset_name='Medium office')
 visualization(small_office, 'Mean air Temperature [°C]', dataset_name='Small office')
-#visualization(restaurant, 'Mean air Temperature [°C]', dataset_name='Restaurant')
-#visualization(retail, 'Mean air Temperature [°C]', dataset_name='Retail')
+visualization(restaurant, 'Mean air Temperature [°C]', dataset_name='Restaurant')
+visualization(retail, 'Mean air Temperature [°C]', dataset_name='Retail')
 
 # Plot the total cooling rate
 visualization(medium_office, 'Total Cooling Rate [W]', dataset_name='Medium office')
 visualization(small_office, 'Total Cooling Rate [W]', dataset_name='Small office')
-#visualization(restaurant, 'Total Cooling Rate [W]', dataset_name='Restaurant')
-#visualization(retail, 'Total Cooling Rate [W]', dataset_name='Retail')
+visualization(restaurant, 'Total Cooling Rate [W]', dataset_name='Restaurant')
+visualization(retail, 'Total Cooling Rate [W]', dataset_name='Retail')
+
+# BOXPLOT
+def bx(df_list, column, by, type):
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+
+    df_list[0].boxplot(column=column, by=by, ax=axes[0, 0])
+    axes[0, 0].title.set_text('Medium office')
+    axes[0, 0].set_xlabel('Day index')
+
+    df_list[1].boxplot(column=column, by=by, ax=axes[0, 1])
+    axes[0, 1].title.set_text('Small office')
+    axes[0, 1].set_xlabel('Day index')
+
+    df_list[2].boxplot(column=column, by=by, ax=axes[1, 0])
+    axes[1, 0].title.set_text('Restaurant')
+    axes[1, 0].set_xlabel('Day index')
+
+    df_list[3].boxplot(column=column, by=by, ax=axes[1, 1])
+    axes[1, 1].title.set_text('Retail')
+    axes[1, 1].set_xlabel('Day index')
+    plt.suptitle(column, size=16)
+
+    if column == 'Mean air Temperature [°C]':
+        fig.savefig('def_code/immagini/mean_air_temperature/{}_{}.png'.format(type, column))
+    if column == 'Total Cooling Rate [W]':
+        fig.savefig('def_code/immagini/total_cooling_rate/{}_{}.png'.format(type, column))
+    
+    plt.show()
+
+
+column = 'Mean air Temperature [°C]'
+by = 'Environment:Site Day Type Index [](Hourly)'
+bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
+
+column = 'Total Cooling Rate [W]'
+bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
 """
+"""
+def view_boxplot(df, column, by, title):
+    df.boxplot(by=by, column=column, grid=False)
+    plt.title(title)
+    plt.suptitle('')
+    plt.xlabel('Day index')
+    if column == 'Mean air Temperature [°C]':
+        plt.yticks(np.arange(18, 32, 1))
+    plt.show()
+
+# Boxplot:Mean air temperature
+column = 'Mean air Temperature [°C]'
+by = 'Environment:Site Day Type Index [](Hourly)'
+view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
+view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
+view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
+view_boxplot(retail, column=column, by=by, title='Retail: '+column)
+
+# Boxplot: Total cooling rate
+column = 'Total Cooling Rate [W]'
+by = 'Environment:Site Day Type Index [](Hourly)'
+view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
+view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
+view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
+view_boxplot(retail, column=column, by=by, title='Retail: '+column)
+"""
+
+#___________________________________________________Normalization_______________________________________________________
+
+maxT_m = medium_office['Mean air Temperature [°C]'].max()
+minT_m = medium_office['Mean air Temperature [°C]'].min()
+maxT_s = small_office['Mean air Temperature [°C]'].max()
+minT_s = small_office['Mean air Temperature [°C]'].min()
+
+def normalization(df):
+    df = (df - df.min()) / (df.max() - df.min())
+    return df
+
+medium_office = normalization(medium_office)
+small_office = normalization(small_office)
+restaurant = normalization(restaurant)
+retail = normalization(retail)
+
 #______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
 period = 1
@@ -183,8 +252,6 @@ train_s, val_s, test_s = train_s.to_numpy(), val_s.to_numpy(), test_s.to_numpy()
 
 #_____________________________________Split_the_x_and_y_datasets________________________
 n_steps = 48
-# train_m = train_m[:7488]
-
 # split a multivariate sequence into samples
 def split_sequences(sequences, n_steps):
     X, y = list(), list()
@@ -250,7 +317,6 @@ lr = 0.008 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
 batch_size = 100
-
 
 train_batch_size = 500
 train_data_m = TensorDataset(train_mX, train_mY)
@@ -353,7 +419,8 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-train_loss_m, val_loss_m = train_model(lstm, 60, train_dl_m, val_dl_m, optimizer_m, criterion_m)
+epochs_m = 60
+train_loss_m, val_loss_m = train_model(lstm, epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m, optimizer=optimizer_m, criterion=criterion_m)
 
 """
 for t in range(train_episodes):
@@ -388,19 +455,18 @@ for t in range(train_episodes):
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
 """
 
-
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_m,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(val_loss_m,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 60, 1))
-#plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.xticks(np.arange(0, 60, 5))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
-# plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini/LSTM/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -452,10 +518,10 @@ error_m = y_pred_m - y_lab_m
 plt.hist(error_m, 100, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-0.4, 0.4, 0.1))
 plt.xlim(-0.4, 0.4)
-plt.title('First model prediction error')
+plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini/LSTM/first_model_error({}_epochs).png'.format(train_episodes))
+#plt.savefig('def_code/immagini/LSTM/LSTM_model_error({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -469,7 +535,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini/LSTM/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -494,7 +560,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-#plt.savefig('immagini/LSTM/LSTM_prediction_distribution({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_prediction_distribution({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -523,11 +589,13 @@ for x in lstm_test.l_linear.parameters():
 #____________________ADD MODULES_____________________________________________________________________________
 # lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 
-num_out_ftrs = lstm_test.l_linear[0].out_features
+num_out_ftrs = lstm_test.l_linear[2].in_features
 
-lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 4)
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 8)
 lstm_test.l_linear[3] = nn.ReLU()
-lstm_test.l_linear[4] = nn.Linear(4, 1)
+lstm_test.l_linear[4] = nn.Linear(8, 4)
+lstm_test.l_linear.add_module('5', nn.ReLU())
+lstm_test.l_linear.add_module('6', nn.Linear(4,1))
 
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
@@ -553,7 +621,6 @@ n_features = train_sX.shape[2]
 n_timesteps = lookback
 
 #initialize the network,criterion and optimizer
-# lstm = MV_LSTM(n_features, n_timesteps)
 criterion_ft = torch.nn.MSELoss()
 # optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
 optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.004)
@@ -561,21 +628,23 @@ optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.param
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 # TRAINING TUNING MODEL
-train_loss_s, val_loss_s = train_model(lstm_test, 50, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
+epochs_s = 60
+train_loss_s, val_loss_s = train_model(lstm_test, epochs_s, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_s, '--', color='r', linewidth=1, label='Train Loss')
 plt.plot(val_loss_s, color='b', linewidth=1, label='Validation Loss')
 plt.ylabel('Loss (MSE)')
+plt.ylim(0, 0.005)
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 50, 1))
+plt.xticks(np.arange(0, 60, 5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini/LSTM/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 #______________________________________TESTING______________________________
@@ -600,10 +669,10 @@ error_s = y_pred_s - y_lab_s
 plt.hist(error_s, 100, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-1, 0.6, 0.1))
 plt.xlim(-0.6, 0.6)
-plt.title('First model prediction error')
+plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('immagini/LSTM/LSTM_tuning_model_error({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -612,12 +681,12 @@ plt.plot(y_lab_s, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0,right=350)
+plt.xlim(left=350, right=600)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
-plt.title("Real VS predicted temperature", size=15)
+plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
+# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -636,8 +705,8 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
-plt.title("Prediction distribution", size=15)
-# plt.savefig('immagini/LSTM/LSTM_tuning_prediction_distribution({}_epochs).png'.format(train_episodes))
+plt.title("Tuning prediction distribution", size=15)
+# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
