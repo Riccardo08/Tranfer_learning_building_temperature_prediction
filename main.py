@@ -264,19 +264,13 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_
             label = label.unsqueeze(1)
             loss_c = criterion(output, label.float())
             optimizer.zero_grad()
-            # if epoch == 1:
-            # loss_c.backward(retain_graph=True)
-            # else:
             loss_c.backward()
             optimizer.step()
             loss.append(loss_c.item())
-            # running_corrects += torch.sum(preds == label.data) aggiustare: non sarà mai uguale perchè non si tratta di una classificazione
         TRAIN_LOSS.append(np.sum(loss) / train_batch_size)
         if mode == 'tuning':
             scheduler.step()
 
-        # epoch_acc = running_corrects.double() / len(train_mX)
-        # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
 
         #________________________________________VALIDATION LOOP_______________________________________
         val_loss = []
@@ -293,70 +287,12 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs, mode, train_
         VAL_LOSS.append(np.sum(val_loss) / val_batch_size)
 
         print('Epoch : ', epoch, 'Training Loss : ', TRAIN_LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-        """
-        if epoch_acc > best_acc:
-            best_acc = epoch_acc
-            best_model_wts = copy.deepcopy(model.state_dict())
-        """
+
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    # print('Best val Acc: {:4f}'.format(best_acc))
-    # load best model weights
-    # model.load_state_dict(best_model_wts)
     return TRAIN_LOSS, VAL_LOSS
 
 TRAIN_LOSS, VAL_LOSS = train_model(cnn_model, criterion, optimizer, lr_scheduler, num_epochs=epochs, mode='', train_dataloader=train_dl, val_dataloader=val_dl)
-
-# START THE TRAINING PROCESS
-"""
-cnn_model.train()
-
-for t in range(epochs):
-    # h = cnn_model.init_hidden(batch_size)  #hidden state is initialized at each epoch
-    loss = []
-    for x, label in train_dl:
-        # h = cnn_model.init_hidden(batch_size)                               #since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-        # h = tuple([each.data for each in h])
-        x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1]*x.shape[2])) # 100, 1, 48*6 --> (100, 1, 288)
-        output = cnn_model(x)
-        label = label.unsqueeze(1)
-        loss_c = criterion(output, label.float())
-        optimizer.zero_grad()
-        loss_c.backward()
-        optimizer.step()
-        loss.append(loss_c.item())
-    LOSS.append(np.sum(loss)/train_batch_size)
-    # LOSS.append(loss)
-    # print("Epoch: %d, training loss: %1.5f" % (train_episodes, LOSS[-1]))
-    # print('Epoch : ', t, 'Training Loss : ', LOSS[-1])
-
-
-    # VALIDATION LOOP
-    val_loss = []
-    # h = mv_net.init_hidden(batch_size)
-    for inputs, labels in val_dl:
-        # h = tuple([each.data for each in h])
-        inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1]*inputs.shape[2]))
-        val_output = cnn_model(inputs.float())
-        val_labels = labels.unsqueeze(1)
-        val_loss_c = criterion(val_output, val_labels.float())
-        # VAL_LOSS.append(val_loss.item())
-        val_loss.append(val_loss_c.item())
-        val_output_list.append(val_output)
-        val_labels_list.append(val_labels)
-    VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
-    print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-"""
-
-"""
-flatten = lambda l: [item for sublist in l for item in sublist]
-val_output_list = flatten(val_output_list)
-val_labels_list = flatten(val_labels_list)
-val_output_list = np.array(val_output_list, dtype=float)
-val_labels_list = np.array(val_labels_list, dtype=float)
-val_output_list = np.reshape(val_output_list, (-1, 1))
-val_labels_list = np.reshape(val_labels_list, (-1, 1))
-"""
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(TRAIN_LOSS,'--', color='r', linewidth = 1, label = 'Train Loss')
@@ -466,7 +402,6 @@ loadedmodel.load_state_dict(torch.load("cnn_model_weight.pth"))
 """
 
 
-
 #_____________________________________________________DEFINE_TUNING_PHASE_______________________________________________
 def freeze_params(model):
     for param_c in model.conv.parameters():
@@ -476,7 +411,9 @@ def freeze_params(model):
     return model
 
 #TODO: add.optimizer
+
 cnn_test = freeze_params(cnn_model)
+optimizer_ft = optim.SGD(filter(lambda p: p.requires_grad, cnn_test.parameters()), lr=0.1)
 
 print(cnn_test)
 for i in cnn_test.conv.parameters():
@@ -494,12 +431,7 @@ cnn_test.fc = nn.Sequential(
 )
 print(cnn_test)
 
-"""
-cnn_test.fc[0] = nn.Linear(num_ftrs, 50)
-cnn_test.fc[1] = nn.ReLU()
-cnn_test.fc[2] = nn.Linear(50, 35)
-cnn_test.fc[3] = nn.ReLU()
-"""
+
 cnn_test.fc[4] = nn.Linear(40, 30)
 cnn_test.fc[5] = nn.ReLU()
 cnn_test.fc[6] = nn.Linear(30, 20)
@@ -510,7 +442,7 @@ print(cnn_test)
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
 criterion_ft = torch.nn.MSELoss()
-optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
+# optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
 
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
