@@ -255,7 +255,6 @@ for t in range(train_episodes):
     # VAL_LOSS.append(val_loss.item())
     VAL_LOSS.append(np.sum(val_loss)/val_batch_size)
     print('Epoch : ', t, 'Training Loss : ', LOSS[-1], 'Validation Loss :', VAL_LOSS[-1])
-    #print("Epoch: %d, training loss: %1.5f" % (train_episodes, VAL_LOSS[-1]))
 
 
 
@@ -363,8 +362,6 @@ plt.title("Prediction distribution", size=15)
 plt.show()
 
 
-
-
 #_____________________________________________________TUNING_PHASE_______________________________________________
 def freeze_params(model):
     for param_c in model.l_lstm.parameters():
@@ -376,7 +373,7 @@ def freeze_params(model):
 # for param_c in mv_net.l_lstm.parameters():
 #     print(param_c)
 
-lstm_test = freeze_params(mv_net)
+lstm_test = freeze_params(lstm)
 
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
@@ -385,28 +382,40 @@ for x in lstm_test.l_linear.parameters():
     print(x)
 
 #____________________ADD MODULES_____________________________________________________________________________
-
 # lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
 
-num_ftrs = lstm_test.l_linear.in_features
+num_out_ftrs = lstm_test.l_linear[0].out_features
+"""
 lstm_test.l_linear = nn.Sequential(
     nn.Linear(num_ftrs, 5),
     nn.ReLU(),
     nn.Linear(5, 1)
 )
+"""
+
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 4)
+lstm_test.l_linear[3] = nn.ReLU()
+lstm_test.l_linear[4] = nn.Linear(4, 1)
 
 print(lstm_test)
+for i in lstm_test.l_lstm.parameters():
+    print(i)
+for x in lstm_test.l_linear.parameters():
+    print(x)
+
 
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
 criterion_ft = torch.nn.MSELoss()
-optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
+# optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.004)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 #__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
 from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+
 
 #New Dataloaders
 train_batch_size = 500
@@ -533,12 +542,7 @@ plt.legend()
 # plt.savefig('immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(train_episodes))
 plt.show()
 
-"""
-#METRICS
-def mean_absolute_percentage_error(y_true, y_pred):
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
-"""
+
 MAPE = mean_absolute_percentage_error(ylab, ypred)
 RMSE = mean_squared_error(ylab,ypred)**0.5
 R2 = r2_score(ylab,ypred)
