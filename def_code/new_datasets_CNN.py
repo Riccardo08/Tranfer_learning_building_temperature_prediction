@@ -267,13 +267,13 @@ class CNN(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(in_features=59, out_features=40),  # need to change the input (20).
             nn.ReLU(),
-            nn.Linear(40, 30),
+            nn.Linear(40, 20),
             nn.ReLU(),
-            nn.Linear(30, 20),
-            nn.ReLU(),
-            nn.Linear(20, 10),
-            nn.ReLU(),
-            nn.Linear(10, 1)
+            nn.Linear(20, 1)
+            # nn.ReLU(),
+            # nn.Linear(20, 10),
+            # nn.ReLU(),
+            #nn.Linear(10, 1)
         )
     def forward(self, x):
         x = self.conv(x)
@@ -285,8 +285,7 @@ class CNN(nn.Module):
 
 
 #______________________________________________Define_PARAMETERS______________________________________________
-epochs = 100
-learning_rate = 0.008
+learning_rate = 0.003
 in_channels = 1
 out_channels = 2
 # batch_size = 100
@@ -297,7 +296,6 @@ test_batch_size = 200
 # Define model, criterion and optimizer:
 cnn = CNN(in_channels, out_channels)
 criterion_m = torch.nn.MSELoss()
-# optimizer_m = torch.optim.SGD(cnn.parameters(), lr=learning_rate)
 optimizer_m = torch.optim.SGD(cnn.parameters(), lr=learning_rate)
 
 
@@ -363,7 +361,8 @@ def train_model(model, criterion, optimizer, num_epochs, train_dl, val_dl, mode=
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     return TRAIN_LOSS, VAL_LOSS
 
-train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, num_epochs=epochs, train_dl=train_dl_m, val_dl=val_dl_m)
+epochs_m = 200
+train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, num_epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m)
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_m,'--', color='r', linewidth = 1, label = 'Train Loss')
@@ -376,7 +375,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-plt.savefig('immagini/CNN/CNN_Train_VS_Val_LOSS(200_epochs).png')
+plt.savefig('def_code/immagini/CNN/CNN_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -429,7 +428,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini/cnn_model_error.png')
+plt.savefig('def_code/immagini/CNN/CNN_model_error.png')
 plt.show()
 
 
@@ -443,7 +442,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
+plt.savefig('def_code/immagini/CNN/CNN_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -467,7 +466,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
+plt.savefig('def_code/immagini/CNN/CNN_prediction_distribution({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -487,20 +486,22 @@ for i in cnn_test.conv.parameters():
 for x in cnn_test.fc.parameters():
     print(x)
 
-num_ftrs = cnn_test.fc[2].out_features
+num_ftrs = cnn_test.fc[2].in_features
 
-cnn_test.fc[4] = nn.Linear(num_ftrs, 10)
-cnn_test.fc[5] = nn.ReLU()
-cnn_test.fc[6] = nn.Linear(10, 5)
+cnn_test.fc[2] = nn.Linear(num_ftrs, 30)
+cnn_test.fc[3] = nn.ReLU()
+cnn_test.fc[4] = nn.Linear(30, 20)
 cnn_test.fc.add_module('7', nn.ReLU())
-cnn_test.fc.add_module('8', nn.Linear(5, 1))
+cnn_test.fc.add_module('8', nn.Linear(20, 10))
+cnn_test.fc.add_module('9', nn.ReLU())
+cnn_test.fc.add_module('10', nn.Linear(10, 1))
 print(cnn_test)
 # How to delete some layers from the model:
 # cnn_test.fc = nn.Sequential(*[cnn_test.fc[i] for i in range(4, len(cnn_test.fc))])
 
 criterion_ft = torch.nn.MSELoss()
 # optimizer_ft = torch.optim.SGD(cnn_test.parameters(), lr=learning_rate)
-optimizer_ft = optim.SGD(filter(lambda p: p.requires_grad, cnn_test.parameters()), lr=0.002)
+optimizer_ft = optim.SGD(filter(lambda p: p.requires_grad, cnn_test.parameters()), lr=0.004)
 
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
@@ -518,8 +519,9 @@ val_batch_size = 300
 val_data_s = TensorDataset(val_sX, val_sY)
 val_dl_s = DataLoader(val_data_s, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
+epochs_s = 150
 #_TRAIN_THE_MODEL_________________________________________________________________________________
-train_loss_s, val_loss_s = train_model(cnn_test, criterion_ft, optimizer_ft, 50, train_dl=train_dl_s, val_dl=val_dl_s, mode='tuning')
+train_loss_s, val_loss_s = train_model(cnn_test, criterion_ft, optimizer_ft, epochs_s, train_dl=train_dl_s, val_dl=val_dl_s, mode='tuning')
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
@@ -534,7 +536,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('immagini/CNN/CNN_tuning_Train_VS_Val_LOSS(200_epochs).png')
+plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -565,7 +567,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('immagini/CNN/cnn_model_error.png')
+plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -579,7 +581,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('immagini/CNN/CNN_real_VS_predicted_temperature.png')
+plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -589,7 +591,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 MAPE = mean_absolute_percentage_error(y_lab_s, y_pred_s)
-RMSE=mean_squared_error(y_lab_s, y_pred_s)**0.5
+RMSE = mean_squared_error(y_lab_s, y_pred_s)**0.5
 R2 = r2_score(y_lab_s, y_pred_s)
 
 print('MAPE:%0.5f%%'%MAPE)      # MAPE < 10% is Excellent, MAPE < 20% is Good.
@@ -603,7 +605,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('immagini/CNN/CNN_prediction_distribution.png')
+plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
