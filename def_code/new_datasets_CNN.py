@@ -58,7 +58,7 @@ small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', fil
 small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
 
-"""
+
 # Restaurant
 restaurant_100 = read_csv(directory='restaurant', file_csv='Restaurant_100.csv')
 restaurant_100_potenza_random_60_percento = read_csv(directory='restaurant', file_csv='Restaurant_100_potenza_random_60_percento.csv')
@@ -70,7 +70,7 @@ retail_100 = read_csv(directory='retail', file_csv='Retail_100.csv')
 retail_100_potenza_random_60_percento = read_csv(directory='retail', file_csv='Retail_100_potenza_random_60_percento.csv')
 retail_105 = read_csv(directory='retail', file_csv='Retail_105.csv')
 retail_random = read_csv(directory='retail', file_csv='Retail_random.csv')
-"""
+
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
@@ -89,11 +89,13 @@ retail = pd.DataFrame()
 
 medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
-# restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns, name=restaurant)
-# retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns, name=restaurant)
+restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
+retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
 
-maxT = medium_office['Mean air Temperature [°C]'].max()
-minT = medium_office['Mean air Temperature [°C]'].min()
+maxT_m = medium_office['Mean air Temperature [°C]'].max()
+minT_m = medium_office['Mean air Temperature [°C]'].min()
+maxT_s = small_office['Mean air Temperature [°C]'].max()
+minT_s = small_office['Mean air Temperature [°C]'].min()
 
 def normalization(df):
     df = (df - df.min()) / (df.max() - df.min())
@@ -102,55 +104,9 @@ def normalization(df):
 
 medium_office = normalization(medium_office)
 small_office = normalization(small_office)
+restaurant = normalization(restaurant)
+retail = normalization(retail)
 
-"""
-def visualization(dataset, column):
-    len_f = 0
-    for i in range(12):
-        len_i = len_f * 976
-        len_f = 976 * (i+1)
-        fig, axs = plt.subplots(3, 4, figsize=(40,20))
-        if i==0:
-            axs[i].plot(dataset[column][0:976])
-        else:
-            axs[i].plot(dataset[column][len_i:len_f])
-    plt.show()
-"""
-
-"""
-def visualization(dataset, column, dataset_name):
-    fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
-    ax1.plot(dataset[column][0:976])
-    ax2.plot(dataset[column][976:1952])
-    ax3.plot(dataset[column][1952:2928])
-    ax4.plot(dataset[column][2928:3904])
-    ax5.plot(dataset[column][3904:4880])
-    ax6.plot(dataset[column][4880:5856])
-    ax7.plot(dataset[column][5856:6832])
-    ax8.plot(dataset[column][6832:7808])
-    ax9.plot(dataset[column][7808:8784])
-    ax10.plot(dataset[column][8784:9760])
-    ax11.plot(dataset[column][9760:10736])
-    ax12.plot(dataset[column][10736:11712])
-    fig.suptitle(dataset_name+': '+column, size=50)
-    plt.show()
-    if column == 'Mean air Temperature [°C]':
-        fig.savefig('def_code/immagini/mean_air_temperature/{}_{}.png'.format(dataset_name, column))
-    if column == 'Total Cooling Rate [W]':
-        fig.savefig('def_code/immagini/total_cooling_rate/{}_{}.png'.format(dataset_name, column))
-
-# Plot mean air temperature
-visualization(medium_office, 'Mean air Temperature [°C]', dataset_name='Medium office')
-visualization(small_office, 'Mean air Temperature [°C]', dataset_name='Small office')
-#visualization(restaurant, 'Mean air Temperature [°C]', dataset_name='Restaurant')
-#visualization(retail, 'Mean air Temperature [°C]', dataset_name='Retail')
-
-# Plot the total cooling rate
-visualization(medium_office, 'Total Cooling Rate [W]', dataset_name='Medium office')
-visualization(small_office, 'Total Cooling Rate [W]', dataset_name='Small office')
-#visualization(restaurant, 'Total Cooling Rate [W]', dataset_name='Restaurant')
-#visualization(retail, 'Total Cooling Rate [W]', dataset_name='Retail')
-"""
 #______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
 period = 1
@@ -379,7 +335,7 @@ plt.show()
 test_data_m = TensorDataset(test_mX, test_mY)
 test_dl_m = DataLoader(test_data_m, batch_size=test_batch_size, drop_last=True)
 
-def test_model(model, test_dl):
+def test_model(model, test_dl, maxT, minT):
     model.eval()
     test_losses = []
     y_pred = []
@@ -403,7 +359,7 @@ def test_model(model, test_dl):
     return y_pred, y_lab
 
 
-y_pred_m, y_lab_m = test_model(cnn, test_dl_m)
+y_pred_m, y_lab_m = test_model(cnn, test_dl_m, maxT_m, minT_m)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
@@ -542,7 +498,7 @@ test_data_s = TensorDataset(test_sX, test_sY)
 test_dl_s = DataLoader(test_data_s, batch_size=test_batch_size, shuffle=False, drop_last=True) # batch_size -> terza dimensione
 
 
-y_pred_s, y_lab_s = test_model(cnn_test, test_dl_s)
+y_pred_s, y_lab_s = test_model(cnn_test, test_dl_s, maxT_s, minT_s)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_s = flatten(y_pred_s)
