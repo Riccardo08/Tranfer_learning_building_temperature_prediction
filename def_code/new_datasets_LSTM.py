@@ -644,7 +644,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 #______________________________________TESTING______________________________
@@ -672,7 +672,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -686,7 +686,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -706,7 +706,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
