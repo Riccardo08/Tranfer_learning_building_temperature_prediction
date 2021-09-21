@@ -256,20 +256,20 @@ class CNN(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv1d(in_channels=self.in_channel, out_channels=self.out_channel, kernel_size=self.kernel_size),
             nn.ReLU(),
-            nn.AvgPool1d(2),
+            nn.MaxPool1d(2),
             nn.Conv1d(self.out_channel, 1, self.kernel_size),
             nn.ReLU(),
-            nn.AvgPool1d(2),
-            # nn.Conv1d(1, 1, self.kernel_size),
-            # nn.ReLU(),
-            # nn.MaxPool1d(2)
+            nn.MaxPool1d(2)
+            #nn.Conv1d(1, 1, self.kernel_size),
+            #nn.ReLU(),
+            #nn.MaxPool1d(2)
         )
         self.fc = nn.Sequential(
             nn.Linear(in_features=59, out_features=40),  # need to change the input (20).
             nn.ReLU(),
-            nn.Linear(40, 20),
-            nn.ReLU(),
-            nn.Linear(20, 1)
+            nn.Linear(40, 1)
+            #nn.ReLU(),
+            #nn.Linear(20, 1)
             # nn.ReLU(),
             # nn.Linear(20, 10),
             # nn.ReLU(),
@@ -285,7 +285,7 @@ class CNN(nn.Module):
 
 
 #______________________________________________Define_PARAMETERS______________________________________________
-learning_rate = 0.003
+learning_rate = 0.008
 in_channels = 1
 out_channels = 2
 # batch_size = 100
@@ -319,18 +319,14 @@ def train_model(model, criterion, optimizer, num_epochs, train_dl, val_dl, mode=
     val_output_list = []
     val_labels_list = []
     running_corrects = 0
-    t = 0
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 20)
         #_____________________________________TRAINING_LOOP____________________________________________
         loss = []
         for x, label in train_dl:
-            # h = cnn_model.init_hidden(batch_size)   since the batch is big enough, a stateless mode is used (also considering the possibility to shuffle the training examples, which increase the generalization ability of the network)
-            # h = tuple([each.data for each in h])
             x = torch.reshape(x.float(), (train_batch_size, in_channels, x.shape[1] * x.shape[2]))  # 100, 1, 48*6 --> (100, 1, 288)
             output = model(x)
-            # _, preds = torch.max(output, 1)
             label = label.unsqueeze(1)
             loss_c = criterion(output, label.float())
             optimizer.zero_grad()
@@ -343,7 +339,6 @@ def train_model(model, criterion, optimizer, num_epochs, train_dl, val_dl, mode=
 
         #________________________________________VALIDATION LOOP_______________________________________
         val_loss = []
-        # h = mv_net.init_hidden(batch_size)
         for inputs, labels in val_dl:
             inputs = torch.reshape(inputs.float(), (val_batch_size, in_channels, inputs.shape[1] * inputs.shape[2]))
             val_output = model(inputs.float())
@@ -361,7 +356,7 @@ def train_model(model, criterion, optimizer, num_epochs, train_dl, val_dl, mode=
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_m = 200
+epochs_m = 350
 train_loss_m, val_loss_m = train_model(cnn, criterion_m, optimizer_m, num_epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m)
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
@@ -375,7 +370,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-plt.savefig('def_code/immagini/CNN/CNN_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/CNN/CNN_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -428,7 +423,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('First model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-plt.savefig('def_code/immagini/CNN/CNN_model_error.png')
+# plt.savefig('def_code/immagini/CNN/CNN_model_error.png')
 plt.show()
 
 
@@ -442,7 +437,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('def_code/immagini/CNN/CNN_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
+# plt.savefig('def_code/immagini/CNN/CNN_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -466,7 +461,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('def_code/immagini/CNN/CNN_prediction_distribution({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/CNN/CNN_prediction_distribution({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -489,10 +484,11 @@ for x in cnn_test.fc.parameters():
 num_ftrs = cnn_test.fc[2].in_features
 
 cnn_test.fc[2] = nn.Linear(num_ftrs, 30)
-cnn_test.fc[3] = nn.ReLU()
-cnn_test.fc[4] = nn.Linear(30, 20)
-cnn_test.fc.add_module('7', nn.ReLU())
-cnn_test.fc.add_module('8', nn.Linear(20, 10))
+#cnn_test.fc[3] = nn.ReLU()
+#cnn_test.fc[4] = nn.Linear(30, 1)
+cnn_test.fc.add_module('3', nn.ReLU())
+cnn_test.fc.add_module('4', nn.Linear(30, 1))
+
 cnn_test.fc.add_module('9', nn.ReLU())
 cnn_test.fc.add_module('10', nn.Linear(10, 1))
 print(cnn_test)
@@ -536,7 +532,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -564,10 +560,10 @@ error_s = y_pred_s - y_lab_s
 plt.hist(error_s, 200, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-0.6, 0.6, 0.1))
 plt.xlim(-0.6, 0.6)
-plt.title('First model prediction error')
+plt.title('CNN tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -581,7 +577,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -605,7 +601,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/CNN/tuning/CNN_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
