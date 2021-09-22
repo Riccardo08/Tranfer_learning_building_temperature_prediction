@@ -532,10 +532,16 @@ plt.title("Prediction distribution", size=15)
 plt.show()
 
 
+# _____________________________IMPORT_ONE_MONTH_OF_SMALL-OFFICE_RESULTS_________________________________________________
 
+# TODO: 1) traininare rete su un mese di small (stessa architettura senza pesi salvate)
+#       2) train rete su small office completo (stessa architettura senza pesi salvate)
+#       3) train TL con un basso lr su un mese di dati (dopo il tuning)
 
+from one_month_small import train_loss_small_1m, val_loss_small_1m, y_pred_small_1m, y_lab_small_1m
+from total_small import train_loss_small, val_loss_small, y_pred_small, y_lab_small
 
-#_____________________________________________________TUNING_PHASE_______________________________________________
+# _____________________________________________________TUNING_PHASE_____________________________________________________
 def freeze_params(model):
     for param_c in model.l_lstm.parameters():
             param_c.requires_grad = False
@@ -591,7 +597,7 @@ n_timesteps = lookback
 #initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
 # optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
-optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.004)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
