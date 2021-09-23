@@ -423,12 +423,12 @@ epochs_m = 100
 train_loss_m, val_loss_m = train_model(lstm, epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m, optimizer=optimizer_m, criterion=criterion_m)
 
 
-#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+# Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_m,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(val_loss_m,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 60, 5))
+plt.xticks(np.arange(0, int(epochs_m), 5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -438,8 +438,7 @@ plt.legend()
 plt.show()
 
 
-#=========================================================================================#
-# 1h PREDICTION TESTING
+# __________________________________________________1h PREDICTION TESTING__________________________________________
 
 test_data_m = TensorDataset(test_mX, test_mY)
 test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=val_batch_size, drop_last=True)
@@ -560,14 +559,13 @@ for i in lstm_test.l_lstm.parameters():
 for x in lstm_test.l_linear.parameters():
     print(x)
 
-#____________________ADD MODULES_____________________________________________________________________________
-# lstm_test.l_lstm.add_module('lstm_h', nn.LSTM(input_size=8, hidden_size=num_hidden, num_layers=num_layers, batch_first=True))
+# ______________________________ADD MODULES_____________________________________________________________________________
 
 num_out_ftrs = lstm_test.l_linear[2].in_features
 
-lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 8)
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 7)
 lstm_test.l_linear[3] = nn.ReLU()
-lstm_test.l_linear[4] = nn.Linear(8, 4)
+lstm_test.l_linear[4] = nn.Linear(7, 4)
 lstm_test.l_linear.add_module('5', nn.ReLU())
 lstm_test.l_linear.add_module('6', nn.Linear(4, 1))
 
@@ -578,42 +576,42 @@ for x in lstm_test.l_linear.parameters():
     print(x)
 
 
-#__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
+# __________________________________INCLUDE_NEW_DATASET_________________________________________________________________
 # from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
-from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY
+from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY, test_small_1mX, test_small_1mY
 
-train_batch_size = 90
-train_data_s = TensorDataset(train_small_1mX, train_small_1mY)
-train_dl_s = DataLoader(train_data_s, batch_size=train_batch_size, shuffle=True, drop_last=True)
+train_batch_size = 60
+train_data_small_1m = TensorDataset(train_small_1mX, train_small_1mY)
+train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-val_batch_size = 25
-val_data_s = TensorDataset(val_small_1mX, val_small_1mY)
-val_dl_s = DataLoader(val_data_s, batch_size=val_batch_size, shuffle=True, drop_last=True)
+val_batch_size = 15
+val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
+val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
 
-#generalize the number of features and the number of timesteps by linking them to the preprocessing
-n_features = train_sX.shape[2]
+# generalize the number of features and the number of timesteps by linking them to the preprocessing
+n_features = train_small_1mX.shape[2]
 n_timesteps = lookback
 
-#initialize the network,criterion and optimizer
+# initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
 # optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
-optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.002)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
-lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
-epochs_s = 60
-train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
+epochs_s = 150
+train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
 
 
-#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+# Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_st_1m, '--', color='r', linewidth=1, label='Train Loss')
 plt.plot(val_loss_st_1m, color='b', linewidth=1, label='Validation Loss')
 plt.ylabel('Loss (MSE)')
-plt.ylim(0, 0.005)
+#plt.ylim(0, 0.005)
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 60, 5))
+plt.xticks(np.arange(0, int(epochs_s), 10))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -622,12 +620,10 @@ plt.legend()
 # plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
-#______________________________________TESTING______________________________
-
-from one_month_small import test_small_1mX, test_small_1mY
-
+# ______________________________________TESTING______________________________
+test_batch_size = 25
 test_data_s = TensorDataset(test_small_1mX, test_small_1mY)
-test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=val_batch_size, drop_last=True)
+test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
@@ -658,7 +654,7 @@ plt.plot(y_lab_st_1m, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=350, right=600)
+plt.xlim(left=0, right=100)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
@@ -676,7 +672,7 @@ print('RMSE:', RMSE.item())
 print('R2:', R2.item())
 
 
-plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1) # ,alpha=0.1
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
