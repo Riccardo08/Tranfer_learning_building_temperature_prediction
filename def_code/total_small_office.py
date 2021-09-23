@@ -263,7 +263,7 @@ epochs_s= 200
 train_loss_total_s, val_loss_total_s = train_model(lstm, epochs=epochs_s, train_dl=train_dl_total_s, val_dl=val_dl_total_s, optimizer=optimizer_total_s, criterion=criterion_total_s)
 
 
-#Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+# Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_total_s, '--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(val_loss_total_s, color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
