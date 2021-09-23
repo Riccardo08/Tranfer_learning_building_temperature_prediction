@@ -534,8 +534,8 @@ plt.show()
 
 # _____________________________IMPORT_ONE_MONTH_OF_SMALL-OFFICE_RESULTS_________________________________________________
 
-# TODO: 1) traininare rete su un mese di small (stessa architettura senza pesi salvate)
-#       2) train rete su small office completo (stessa architettura senza pesi salvate)
+# TODO: 1) traininare rete su un mese di small (stessa architettura senza salvare pesi)
+#       2) train rete su small office completo (stessa architettura senza salvare pesi)
 #       3) train TL con un basso lr su un mese di dati (dopo il tuning)
 
 from one_month_small import train_loss_small_1m, val_loss_small_1m, y_pred_small_1m, y_lab_small_1m
