@@ -147,16 +147,16 @@ print(type(test_small_1mY), test_small_1mY.shape)
 # HYPER PARAMETERS
 lookback = 48
 # train_episodes = 25
-lr = 0.008 #0.005 #0.009
+lr = 0.006 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
 batch_size = 100
 
-train_batch_size = 500
+train_batch_size = 90
 train_data_small_1m = TensorDataset(train_small_1mX, train_small_1mY)
 train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-val_batch_size = 200
+val_batch_size = 25
 val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
 val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
@@ -254,22 +254,22 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_small_1m = 60
+epochs_small_1m = 200
 train_loss_small_1m, val_loss_small_1m = train_model(lstm, epochs=epochs_small_1m, train_dl=train_dl_small_1m, val_dl=val_dl_small_1m, optimizer=optimizer_small_1m, criterion=criterion_small_1m)
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(train_loss_small_1m,'--',color='r', linewidth = 1, label = 'Train Loss')
-plt.plot(val_loss_small_1m,color='b', linewidth = 1, label = 'Validation Loss')
+plt.plot(train_loss_small_1m, '--',color='r', linewidth = 1, label = 'Train Loss')
+plt.plot(val_loss_small_1m, color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, 60, 5))
+plt.xticks(np.arange(0, int(epochs_small_1m), 10))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
+# plt.savefig('def_code/immagini/one_month_small/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -326,7 +326,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/LSTM/LSTM_model_error({}_epochs).png'.format(epochs_m))
+# plt.savefig('def_code/immagini/one_month_small/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -335,12 +335,12 @@ plt.plot(y_lab_small_1m, color="b", linestyle="dashed", linewidth=1, label="Real
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0,right=800)
+plt.xlim(left=0, right=90)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
+# plt.savefig('def_code/immagini/one_month_small/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -359,14 +359,14 @@ print('RMSE:', RMSE.item())
 print('R2:', R2.item())
 
 
-plt.scatter(y_lab_small_1m, y_pred_small_1m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.scatter(y_lab_small_1m, y_pred_small_1m,  color='k', edgecolor= 'white', linewidth=1) #,alpha=0.1
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/LSTM_prediction_distribution({}_epochs).png'.format(epochs_m))
+# plt.savefig('def_code/immagini/one_month_small/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
