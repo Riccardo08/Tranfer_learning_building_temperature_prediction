@@ -57,7 +57,7 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
-
+"""
 # Restaurant
 restaurant_100 = read_csv(directory='restaurant', file_csv='Restaurant_100.csv')
 restaurant_100_potenza_random_60_percento = read_csv(directory='restaurant', file_csv='Restaurant_100_potenza_random_60_percento.csv')
@@ -69,7 +69,7 @@ retail_100 = read_csv(directory='retail', file_csv='Retail_100.csv')
 retail_100_potenza_random_60_percento = read_csv(directory='retail', file_csv='Retail_100_potenza_random_60_percento.csv')
 retail_105 = read_csv(directory='retail', file_csv='Retail_105.csv')
 retail_random = read_csv(directory='retail', file_csv='Retail_random.csv')
-
+"""
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
@@ -83,13 +83,13 @@ def concat_datasets(list, columns):
 
 medium_office = pd.DataFrame()
 small_office = pd.DataFrame()
-restaurant = pd.DataFrame()
-retail = pd.DataFrame()
+# restaurant = pd.DataFrame()
+# retail = pd.DataFrame()
 
 medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
-restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
-retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
+# restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
+# retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
 
 
 #__________________________________________________PLOTS________________________________________________________________
@@ -108,7 +108,7 @@ def visualization(dataset, column):
             axs[i].plot(dataset[column][len_i:len_f])
     plt.show()
 """
-
+"""
 def visualization(dataset, column, dataset_name):
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
     ax1.plot(dataset[column][0:976])
@@ -177,7 +177,7 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 
 column = 'Total Cooling Rate [W]'
 bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
-
+"""
 """
 def view_boxplot(df, column, by, title):
     df.boxplot(by=by, column=column, grid=False)
@@ -218,8 +218,8 @@ def normalization(df):
 
 medium_office = normalization(medium_office)
 small_office = normalization(small_office)
-restaurant = normalization(restaurant)
-retail = normalization(retail)
+#restaurant = normalization(restaurant)
+#retail = normalization(retail)
 
 #______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
@@ -316,7 +316,7 @@ lookback = 48
 lr = 0.008 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
-batch_size = 100
+# batch_size = 100
 
 train_batch_size = 500
 train_data_m = TensorDataset(train_mX, train_mY)
@@ -419,7 +419,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_m = 60
+epochs_m = 100
 train_loss_m, val_loss_m = train_model(lstm, epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m, optimizer=optimizer_m, criterion=criterion_m)
 
 
@@ -539,7 +539,7 @@ plt.show()
 #       3) train TL con un basso lr su un mese di dati (dopo il tuning)
 
 from one_month_small import train_loss_small_1m, val_loss_small_1m, y_pred_small_1m, y_lab_small_1m
-from total_small import train_loss_small, val_loss_small, y_pred_small, y_lab_small
+from total_small_office import train_loss_total_s, val_loss_total_s, y_pred_s, y_lab_s
 
 # _____________________________________________________TUNING_PHASE_____________________________________________________
 def freeze_params(model):
@@ -569,7 +569,7 @@ lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 8)
 lstm_test.l_linear[3] = nn.ReLU()
 lstm_test.l_linear[4] = nn.Linear(8, 4)
 lstm_test.l_linear.add_module('5', nn.ReLU())
-lstm_test.l_linear.add_module('6', nn.Linear(4,1))
+lstm_test.l_linear.add_module('6', nn.Linear(4, 1))
 
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
@@ -580,13 +580,14 @@ for x in lstm_test.l_linear.parameters():
 
 #__________________________________INCLUDE_NEW_DATASET__________________________________________________________________
 # from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY
 
-train_batch_size = 500
-train_data_s = TensorDataset(train_sX, train_sY)
+train_batch_size = 90
+train_data_s = TensorDataset(train_small_1mX, train_small_1mY)
 train_dl_s = DataLoader(train_data_s, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-val_batch_size = 200
-val_data_s = TensorDataset(val_sX, val_sY)
+val_batch_size = 25
+val_data_s = TensorDataset(val_small_1mX, val_small_1mY)
 val_dl_s = DataLoader(val_data_s, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
 
@@ -603,12 +604,12 @@ lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 # TRAINING TUNING MODEL
 epochs_s = 60
-train_loss_s, val_loss_s = train_model(lstm_test, epochs_s, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
+train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_s, val_dl_s, optimizer_ft, criterion_ft, mode='tuning')
 
 
 #Plot to verify validation and train loss, in order to avoid underfitting and overfitting
-plt.plot(train_loss_s, '--', color='r', linewidth=1, label='Train Loss')
-plt.plot(val_loss_s, color='b', linewidth=1, label='Validation Loss')
+plt.plot(train_loss_st_1m, '--', color='r', linewidth=1, label='Train Loss')
+plt.plot(val_loss_st_1m, color='b', linewidth=1, label='Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.ylim(0, 0.005)
 plt.xlabel('Epoch')
@@ -623,22 +624,24 @@ plt.show()
 
 #______________________________________TESTING______________________________
 
-test_data_s = TensorDataset(test_sX, test_sY)
+from one_month_small import test_small_1mX, test_small_1mY
+
+test_data_s = TensorDataset(test_small_1mX, test_small_1mY)
 test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=val_batch_size, drop_last=True)
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_s, y_lab_s = test_model(lstm_test, test_dl_s, maxT_s, minT_s)
+y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_s, minT_s)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
-y_pred_s = flatten(y_pred_s)
-y_lab_s = flatten(y_lab_s)
-y_pred_s = np.array(y_pred_s, dtype=float)
-y_lab_s = np.array(y_lab_s, dtype = float)
+y_pred_st_1m = flatten(y_pred_st_1m)
+y_lab_st_1m = flatten(y_lab_st_1m)
+y_pred_st_1m = np.array(y_pred_st_1m, dtype=float)
+y_lab_st_1m = np.array(y_lab_st_1m, dtype = float)
 
 
 error_s = []
-error_s = y_pred_s - y_lab_s
+error_s = y_pred_st_1m - y_lab_st_1m
 
 plt.hist(error_s, 100, linewidth=1.5, edgecolor='black', color='orange')
 plt.xticks(np.arange(-1, 0.6, 0.1))
@@ -650,8 +653,8 @@ plt.grid(True)
 plt.show()
 
 
-plt.plot(y_pred_s, color='orange', label="Predicted")
-plt.plot(y_lab_s, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.plot(y_pred_st_1m, color='orange', label="Predicted")
+plt.plot(y_lab_st_1m, color="b", linestyle="dashed", linewidth=1, label="Real")
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -664,16 +667,16 @@ plt.legend()
 plt.show()
 
 
-MAPE = mean_absolute_percentage_error(y_lab_s, y_pred_s)
-RMSE = mean_squared_error(y_lab_s, y_pred_s)**0.5
-R2 = r2_score(y_lab_s, y_pred_s)
+MAPE = mean_absolute_percentage_error(y_lab_st_1m, y_pred_st_1m)
+RMSE = mean_squared_error(y_lab_st_1m, y_pred_st_1m)**0.5
+R2 = r2_score(y_lab_st_1m, y_pred_st_1m)
 
 print('MAPE:%0.5f%%'%MAPE)
 print('RMSE:', RMSE.item())
 print('R2:', R2.item())
 
 
-plt.scatter(y_lab_s, y_pred_s,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
