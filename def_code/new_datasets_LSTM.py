@@ -73,12 +73,17 @@ retail_random = read_csv(directory='retail', file_csv='Retail_random.csv')
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
-'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Mean air Temperature [°C]']
+'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Total People', 'Mean air Temperature [°C]']
 
 def concat_datasets(list, columns):
     name = pd.DataFrame()
     for x in list:
         name = name.append(x[columns], ignore_index=True)
+    for i in range(0, len(name)):
+        if name['Total People'][i] != 0.00000:
+            name['Total People'][i] = 1.0
+        #else:
+        #    name['Total People'][i] = 1.0
     return name
 
 medium_office = pd.DataFrame()
@@ -177,7 +182,16 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 
 column = 'Total Cooling Rate [W]'
 bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
+
+
 """
+def binary_plot(df, col):
+    plt.plot(df[col])
+    plt.xlim(0,90)
+    plt.show()
+
+binary_plot(medium_office, 'Total People')
+
 """
 def view_boxplot(df, column, by, title):
     df.boxplot(by=by, column=column, grid=False)
@@ -445,8 +459,8 @@ test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=val_batch_size, dr
 test_losses = []
 # h = lstm.init_hidden(val_batch_size)
 
-def test_model(model, test_dl, maxT, minT):
-    h = model.init_hidden(val_batch_size)
+def test_model(model, test_dl, maxT, minT, batch_size):
+    h = model.init_hidden(batch_size)
     model.eval()
     y_pred = []
     y_lab = []
@@ -470,7 +484,7 @@ def test_model(model, test_dl, maxT, minT):
         y_lab.append(labels)
     return y_pred, y_lab
 
-y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m)
+y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m, val_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
@@ -550,9 +564,9 @@ def freeze_params(model):
 
 # for param_c in mv_net.l_lstm.parameters():
 #     print(param_c)
-
 lstm_test = freeze_params(lstm)
-
+lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
+# lstm_tun = freeze_params(lstm_prova)
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
     print(i)
@@ -561,13 +575,17 @@ for x in lstm_test.l_linear.parameters():
 
 # ______________________________ADD MODULES_____________________________________________________________________________
 
-num_out_ftrs = lstm_test.l_linear[2].in_features
+num_out_ftrs = lstm_test.l_linear[0].out_features
 
-lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 7)
-lstm_test.l_linear[3] = nn.ReLU()
-lstm_test.l_linear[4] = nn.Linear(7, 4)
+# lstm_test.l_linear[1] = lstm_test.l_linear.add_module('1', nn.ReLU())
+# lstm_test.l_linear[2] = lstm_test.l_linear.add_module('2', nn.Linear(num_out_ftrs, 1))
+
+lstm_test.l_linear[1] = nn.ReLU()
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 1)
+"""
 lstm_test.l_linear.add_module('5', nn.ReLU())
 lstm_test.l_linear.add_module('6', nn.Linear(4, 1))
+"""
 
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
@@ -601,7 +619,7 @@ optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.param
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
-epochs_s = 150
+epochs_s = 100
 train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
 
 
@@ -627,7 +645,7 @@ test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, d
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_s, minT_s)
+y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_s, minT_s, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_st_1m = flatten(y_pred_st_1m)
