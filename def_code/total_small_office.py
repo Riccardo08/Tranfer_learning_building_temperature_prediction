@@ -56,12 +56,21 @@ small_office_random = read_csv(directory='small_office', file_csv='Small_office_
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
-'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Mean air Temperature [°C]']
-
+'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Total People', 'Mean air Temperature [°C]']
+"""
 def concat_datasets(list, columns):
     name = pd.DataFrame()
     for x in list:
         name = name.append(x[columns], ignore_index=True)
+    return name
+"""
+def concat_datasets(list, columns):
+    name = pd.DataFrame()
+    for x in list:
+        name = name.append(x[columns], ignore_index=True)
+    for i in range(0, len(name)):
+        if name['Total People'][i] != 0.00000:
+            name['Total People'][i] = 1.0
     return name
 
 small_office = pd.DataFrame()
@@ -75,6 +84,13 @@ def normalization(df):
     return df
 
 small_office = normalization(small_office)
+
+def binary_plot(df, col):
+    plt.plot(df[col])
+    # plt.xlim(0, 90)
+    plt.show()
+
+binary_plot(small_office, 'Total People')
 
 # ______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
@@ -152,7 +168,7 @@ print(type(test_total_sY), test_total_sY.shape)
 # HYPER PARAMETERS
 lookback = 48
 # train_episodes = 25
-lr = 0.006 #0.005 #0.009
+lr = 0.008 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
 batch_size = 100
@@ -259,7 +275,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_s= 200
+epochs_s= 150
 train_loss_total_s, val_loss_total_s = train_model(lstm, epochs=epochs_s, train_dl=train_dl_total_s, val_dl=val_dl_total_s, optimizer=optimizer_total_s, criterion=criterion_total_s)
 
 
@@ -331,7 +347,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/total_small_office/LSTM_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/LSTM_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -345,7 +361,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/total_small_office/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -370,5 +386,5 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/total_small_office/LSTM_prediction_distribution({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/LSTM_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
