@@ -187,7 +187,8 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 """
 def binary_plot(df, col):
     plt.plot(df[col])
-    plt.xlim(0,90)
+    plt.xlim(0, 90)
+    plt.title('Occupation binary plot')
     plt.show()
 
 binary_plot(medium_office, 'Total People')
@@ -356,9 +357,11 @@ class MV_LSTM(torch.nn.Module):
         self.l_linear = torch.nn.Sequential(
             nn.Linear(self.n_hidden, 10),
             nn.ReLU(),
-            nn.Linear(10, 5),
-            nn.ReLU(),
-            nn.Linear(5, 1)
+            nn.Linear(10, 1)
+            # nn.ReLU()
+            #nn.Linear(7, 3),
+            #nn.ReLU(),
+            #nn.Linear(3, 1)
         )
     def forward(self, x, h):
         batch_size, seq_len, _ = x.size()
@@ -433,7 +436,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_m = 100
+epochs_m = 150
 train_loss_m, val_loss_m = train_model(lstm, epochs=epochs_m, train_dl=train_dl_m, val_dl=val_dl_m, optimizer=optimizer_m, criterion=criterion_m)
 
 
@@ -442,7 +445,7 @@ plt.plot(train_loss_m,'--',color='r', linewidth = 1, label = 'Train Loss')
 plt.plot(val_loss_m,color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, int(epochs_m), 5))
+plt.xticks(np.arange(0, int(epochs_m), 20))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -453,9 +456,9 @@ plt.show()
 
 
 # __________________________________________________1h PREDICTION TESTING__________________________________________
-
+test_batch_size = 300
 test_data_m = TensorDataset(test_mX, test_mY)
-test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=val_batch_size, drop_last=True)
+test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses = []
 # h = lstm.init_hidden(val_batch_size)
 
@@ -484,7 +487,7 @@ def test_model(model, test_dl, maxT, minT, batch_size):
         y_lab.append(labels)
     return y_pred, y_lab
 
-y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m, val_batch_size)
+y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
@@ -565,7 +568,7 @@ def freeze_params(model):
 # for param_c in mv_net.l_lstm.parameters():
 #     print(param_c)
 lstm_test = freeze_params(lstm)
-lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
+#lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
 # lstm_tun = freeze_params(lstm_prova)
 print(lstm_test)
 for i in lstm_test.l_lstm.parameters():
@@ -580,8 +583,15 @@ num_out_ftrs = lstm_test.l_linear[0].out_features
 # lstm_test.l_linear[1] = lstm_test.l_linear.add_module('1', nn.ReLU())
 # lstm_test.l_linear[2] = lstm_test.l_linear.add_module('2', nn.Linear(num_out_ftrs, 1))
 
+# lstm_test.l_linear[1] = nn.ReLU()
 lstm_test.l_linear[1] = nn.ReLU()
-lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 1)
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 5)
+lstm_test.l_linear.add_module('3', nn.ReLU())
+lstm_test.l_linear.add_module('4', nn.Linear(5, 1))
+
+# lstm_test.l_linear[3] = nn.ReLU()
+# lstm_test.l_linear[4] = nn.Linear(5, 1)
+
 """
 lstm_test.l_linear.add_module('5', nn.ReLU())
 lstm_test.l_linear.add_module('6', nn.Linear(4, 1))
@@ -596,13 +606,13 @@ for x in lstm_test.l_linear.parameters():
 
 # __________________________________INCLUDE_NEW_DATASET_________________________________________________________________
 # from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
-from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY, test_small_1mX, test_small_1mY
+from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY, test_small_1mX, test_small_1mY, maxT_small_1m, minT_small_1m
 
-train_batch_size = 60
+train_batch_size = 90
 train_data_small_1m = TensorDataset(train_small_1mX, train_small_1mY)
 train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-val_batch_size = 15
+val_batch_size = 18
 val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
 val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
@@ -614,12 +624,12 @@ n_timesteps = lookback
 # initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
 # optimizer_ft = torch.optim.SGD(lstm_test.parameters(), lr=lr)
-optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.002)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
-epochs_s = 100
+epochs_s = 200
 train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
 
 
@@ -635,7 +645,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/tuning_on_1.5_months_small_office/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
@@ -645,7 +655,7 @@ test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, d
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_s, minT_s, test_batch_size)
+y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_small_1m, minT_small_1m, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_st_1m = flatten(y_pred_st_1m)
@@ -663,7 +673,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_1.5_months_small_office/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -677,7 +687,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_1.5_months_small_office/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -697,7 +707,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/tuning/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_1.5_months_small_office/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
