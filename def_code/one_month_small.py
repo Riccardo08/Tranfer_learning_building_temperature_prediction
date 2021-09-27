@@ -57,12 +57,21 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
-'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Mean air Temperature [°C]']
+'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Total People', 'Mean air Temperature [°C]']
 
-one_month_small = small_office_100[0:720][columns]
+one_month_small = small_office_100[0:1080][columns]
 
 maxT_small_1m = one_month_small['Mean air Temperature [°C]'].max()
 minT_small_1m = one_month_small['Mean air Temperature [°C]'].min()
+
+def set_binary(df, column):
+    for i in range(0, len(df)):
+        if df[column][i] != 0.00000:
+            df[column][i] = 1.0
+    return df
+
+one_month_small = set_binary(one_month_small, 'Total People')
+
 
 def normalization(df):
     df = (df - df.min()) / (df.max() - df.min())
@@ -147,7 +156,7 @@ print(type(test_small_1mY), test_small_1mY.shape)
 # HYPER PARAMETERS
 lookback = 48
 # train_episodes = 25
-lr = 0.006 #0.005 #0.009
+lr = 0.005 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
 batch_size = 100
@@ -263,26 +272,26 @@ plt.plot(train_loss_small_1m, '--',color='r', linewidth = 1, label = 'Train Loss
 plt.plot(val_loss_small_1m, color='b', linewidth = 1, label = 'Validation Loss')
 plt.ylabel('Loss (MSE)')
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, int(epochs_small_1m), 10))
+plt.xticks(np.arange(0, int(epochs_small_1m), 20))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/one_month_small/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
 # ______________________________________________ 1h PREDICTION TESTING _____________________________________________
-
+test_batch_size = 50
 test_data_small_1m = TensorDataset(test_small_1mX, test_small_1mY)
-test_dl_small_1m = DataLoader(test_data_small_1m, shuffle=False, batch_size=val_batch_size, drop_last=True)
+test_dl_small_1m = DataLoader(test_data_small_1m, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses = []
 
 # h = lstm.init_hidden(val_batch_size)
 
 def test_model(model, test_dl, maxT, minT):
-    h = model.init_hidden(val_batch_size)
+    h = model.init_hidden(test_batch_size)
     model.eval()
     y_pred = []
     y_lab = []
@@ -326,7 +335,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/one_month_small/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -340,7 +349,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/one_month_small/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -366,7 +375,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/one_month_small/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
