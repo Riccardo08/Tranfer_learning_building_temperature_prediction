@@ -57,13 +57,7 @@ small_office_random = read_csv(directory='small_office', file_csv='Small_office_
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
 'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Total People', 'Mean air Temperature [°C]']
-"""
-def concat_datasets(list, columns):
-    name = pd.DataFrame()
-    for x in list:
-        name = name.append(x[columns], ignore_index=True)
-    return name
-"""
+
 def concat_datasets(list, columns):
     name = pd.DataFrame()
     for x in list:
@@ -85,12 +79,14 @@ def normalization(df):
 
 small_office = normalization(small_office)
 
-def binary_plot(df, col):
+def binary_plot(df, col, title):
     plt.plot(df[col])
-    # plt.xlim(0, 90)
+    plt.xlim(0, 500)
+    plt.title('Small office occupation (binary plot)', size=15)
+    # plt.savefig('def_code/immagini/binary_occupation/+'+title+'.png')
     plt.show()
 
-binary_plot(small_office, 'Total People')
+binary_plot(small_office, 'Total People', title='small_office_binary_plot')
 
 # ______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
