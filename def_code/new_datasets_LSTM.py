@@ -57,7 +57,7 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
-"""
+
 # Restaurant
 restaurant_100 = read_csv(directory='restaurant', file_csv='Restaurant_100.csv')
 restaurant_100_potenza_random_60_percento = read_csv(directory='restaurant', file_csv='Restaurant_100_potenza_random_60_percento.csv')
@@ -69,7 +69,7 @@ retail_100 = read_csv(directory='retail', file_csv='Retail_100.csv')
 retail_100_potenza_random_60_percento = read_csv(directory='retail', file_csv='Retail_100_potenza_random_60_percento.csv')
 retail_105 = read_csv(directory='retail', file_csv='Retail_105.csv')
 retail_random = read_csv(directory='retail', file_csv='Retail_random.csv')
-"""
+
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
@@ -93,8 +93,8 @@ small_office = pd.DataFrame()
 
 medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
-# restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
-# retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
+restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
+retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
 
 
 #__________________________________________________PLOTS________________________________________________________________
@@ -113,7 +113,7 @@ def visualization(dataset, column):
             axs[i].plot(dataset[column][len_i:len_f])
     plt.show()
 """
-"""
+
 def visualization(dataset, column, dataset_name):
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
     ax1.plot(dataset[column][0:976])
@@ -183,17 +183,7 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 column = 'Total Cooling Rate [W]'
 bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
 
-
-"""
-def binary_plot(df, col):
-    plt.plot(df[col])
-    plt.xlim(0, 90)
-    plt.title('Occupation binary plot')
-    plt.show()
-
-binary_plot(medium_office, 'Total People')
-
-"""
+# SINGLE BOXPLOTS
 def view_boxplot(df, column, by, title):
     df.boxplot(by=by, column=column, grid=False)
     plt.title(title)
@@ -203,7 +193,7 @@ def view_boxplot(df, column, by, title):
         plt.yticks(np.arange(18, 32, 1))
     plt.show()
 
-# Boxplot:Mean air temperature
+# BOXPLOT: Mean air temperature
 column = 'Mean air Temperature [°C]'
 by = 'Environment:Site Day Type Index [](Hourly)'
 view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
@@ -211,13 +201,59 @@ view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
 view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
 view_boxplot(retail, column=column, by=by, title='Retail: '+column)
 
-# Boxplot: Total cooling rate
+# BOXPLOT: Total cooling rate
 column = 'Total Cooling Rate [W]'
 by = 'Environment:Site Day Type Index [](Hourly)'
 view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
 view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
 view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
 view_boxplot(retail, column=column, by=by, title='Retail: '+column)
+
+
+
+# BINARY PLOT - OCCUPATION
+def binary_plot(df, col, title):
+    plt.plot(df[col])
+    plt.xlim(0, 500)
+    plt.title('Medium office occupation (binary plot)', size=15)
+    # plt.savefig('def_code/immagini/binary_occupation/+'+title+'.png')
+    plt.show()
+
+binary_plot(medium_office, 'Total People', title='medium_office_binary_plot')
+binary_plot(small_office, 'Total People', title='medium_office_binary_plot')
+
+
+# FREQUENCY - TOTAL COOLING RATE
+weekday = pd.DataFrame({'medium': medium_office['Total Cooling Rate [W]'].groupby(medium_office['Environment:Site Day Type Index [](Hourly)']).mean(),
+                       'small': small_office['Total Cooling Rate [W]'].groupby(small_office['Environment:Site Day Type Index [](Hourly)']).mean()})
+weekday.index = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+
+plt.bar(x=weekday.index, height=weekday['medium'], color='b', label='Medium office')
+plt.bar(x=weekday.index, height=weekday['small'], color='r', label='Small office')
+plt.title('Total cooling rate [W]')
+plt.yticks(np.arange(0, 1.1, 0.1))
+plt.legend()
+plt.show()
+
+
+"""
+# DENSITY (COOLING RATE)
+# Libraries & dataset
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# set a grey background (use sns.set_theme() if seaborn version 0.11.0 or above)
+sns.set(style="darkgrid")
+# df = sns.load_dataset('iris')
+
+weekday.index = [1,2,3,4,5,6,7]
+
+# plotting both distibutions on the same figure
+fig = sns.kdeplot(y=weekday['medium'], shade=True, color="r", label='Medium office')
+fig = sns.kdeplot(y=weekday['small'], shade=True, color="b", label='Small office')
+plt.title('Cooling rate density distribution', size=15)
+plt.legend()
+plt.show()
 """
 
 #___________________________________________________Normalization_______________________________________________________
@@ -233,8 +269,8 @@ def normalization(df):
 
 medium_office = normalization(medium_office)
 small_office = normalization(small_office)
-#restaurant = normalization(restaurant)
-#retail = normalization(retail)
+restaurant = normalization(restaurant)
+retail = normalization(retail)
 
 #______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
