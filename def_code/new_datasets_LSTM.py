@@ -256,7 +256,7 @@ plt.legend()
 plt.show()
 """
 
-#___________________________________________________Normalization_______________________________________________________
+# ___________________________________________________Normalization______________________________________________________
 
 maxT_m = medium_office['Mean air Temperature [°C]'].max()
 minT_m = medium_office['Mean air Temperature [°C]'].min()
@@ -272,7 +272,7 @@ small_office = normalization(small_office)
 restaurant = normalization(restaurant)
 retail = normalization(retail)
 
-#______________________________________Datasets_preprocessing___________________________________________________________
+# ______________________________________Datasets_preprocessing__________________________________________________________
 # shifting_period = 1
 period = 1
 l_train = int(0.8 * len(medium_office))
