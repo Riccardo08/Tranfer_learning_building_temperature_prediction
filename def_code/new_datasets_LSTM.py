@@ -97,7 +97,23 @@ restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random
 retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
 
 
-#__________________________________________________PLOTS________________________________________________________________
+# ___________________________________________________Normalization______________________________________________________
+
+maxT_m = medium_office['Mean air Temperature [°C]'].max()
+minT_m = medium_office['Mean air Temperature [°C]'].min()
+maxT_s = small_office['Mean air Temperature [°C]'].max()
+minT_s = small_office['Mean air Temperature [°C]'].min()
+
+def normalization(df):
+    df = (df - df.min()) / (df.max() - df.min())
+    return df
+
+medium_office = normalization(medium_office)
+small_office = normalization(small_office)
+restaurant = normalization(restaurant)
+retail = normalization(retail)
+
+# __________________________________________________PLOTS________________________________________________________________
 
 # LINE
 """
@@ -114,6 +130,11 @@ def visualization(dataset, column):
     plt.show()
 """
 
+medium_office['Environment:Site Day Type Index [](Hourly)'] = round(medium_office['Environment:Site Day Type Index [](Hourly)'], 2)
+small_office['Environment:Site Day Type Index [](Hourly)'] = round(small_office['Environment:Site Day Type Index [](Hourly)'], 2)
+restaurant['Environment:Site Day Type Index [](Hourly)'] = round(restaurant['Environment:Site Day Type Index [](Hourly)'], 2)
+retail['Environment:Site Day Type Index [](Hourly)'] = round(retail['Environment:Site Day Type Index [](Hourly)'], 2)
+
 def visualization(dataset, column, dataset_name):
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(40, 20))
     ax1.plot(dataset[column][0:976])
@@ -128,12 +149,14 @@ def visualization(dataset, column, dataset_name):
     ax10.plot(dataset[column][8784:9760])
     ax11.plot(dataset[column][9760:10736])
     ax12.plot(dataset[column][10736:11712])
-    fig.suptitle(dataset_name+': '+column, size=50)
+    fig.suptitle(dataset_name + ': ' + column, size=50)
+    plt.yticks(np.arange(0, 1 ,0.1))
     plt.show()
     if column == 'Mean air Temperature [°C]':
         fig.savefig('def_code/immagini/mean_air_temperature/{}_{}.png'.format(dataset_name, column))
     if column == 'Total Cooling Rate [W]':
         fig.savefig('def_code/immagini/total_cooling_rate/{}_{}.png'.format(dataset_name, column))
+
 
 # Plot mean air temperature
 visualization(medium_office, 'Mean air Temperature [°C]', dataset_name='Medium office')
@@ -141,11 +164,13 @@ visualization(small_office, 'Mean air Temperature [°C]', dataset_name='Small of
 visualization(restaurant, 'Mean air Temperature [°C]', dataset_name='Restaurant')
 visualization(retail, 'Mean air Temperature [°C]', dataset_name='Retail')
 
+
 # Plot the total cooling rate
 visualization(medium_office, 'Total Cooling Rate [W]', dataset_name='Medium office')
 visualization(small_office, 'Total Cooling Rate [W]', dataset_name='Small office')
 visualization(restaurant, 'Total Cooling Rate [W]', dataset_name='Restaurant')
 visualization(retail, 'Total Cooling Rate [W]', dataset_name='Retail')
+
 
 # BOXPLOT
 def bx(df_list, column, by, type):
@@ -154,6 +179,7 @@ def bx(df_list, column, by, type):
     df_list[0].boxplot(column=column, by=by, ax=axes[0, 0])
     axes[0, 0].title.set_text('Medium office')
     axes[0, 0].set_xlabel('Day index')
+    # axes[0, 0].set_xticks(np.arange(0, 6, 1))
 
     df_list[1].boxplot(column=column, by=by, ax=axes[0, 1])
     axes[0, 1].title.set_text('Small office')
@@ -172,7 +198,7 @@ def bx(df_list, column, by, type):
         fig.savefig('def_code/immagini/mean_air_temperature/{}_{}.png'.format(type, column))
     if column == 'Total Cooling Rate [W]':
         fig.savefig('def_code/immagini/total_cooling_rate/{}_{}.png'.format(type, column))
-    
+
     plt.show()
 
 
@@ -182,6 +208,7 @@ bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=
 
 column = 'Total Cooling Rate [W]'
 bx(df_list=[medium_office, small_office, restaurant, retail], column=column, by=by, type='Boxplot')
+
 
 # SINGLE BOXPLOTS
 def view_boxplot(df, column, by, title):
@@ -190,25 +217,24 @@ def view_boxplot(df, column, by, title):
     plt.suptitle('')
     plt.xlabel('Day index')
     if column == 'Mean air Temperature [°C]':
-        plt.yticks(np.arange(18, 32, 1))
+        plt.yticks(np.arange(0, 1, 0.1))
     plt.show()
 
 # BOXPLOT: Mean air temperature
 column = 'Mean air Temperature [°C]'
 by = 'Environment:Site Day Type Index [](Hourly)'
-view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
-view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
-view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
-view_boxplot(retail, column=column, by=by, title='Retail: '+column)
+view_boxplot(medium_office, column=column, by=by, title='Medium office: ' + column)
+view_boxplot(small_office, column=column, by=by, title='Small office: ' + column)
+view_boxplot(restaurant, column=column, by=by, title='Restaurant: ' + column)
+view_boxplot(retail, column=column, by=by, title='Retail: ' + column)
 
 # BOXPLOT: Total cooling rate
 column = 'Total Cooling Rate [W]'
 by = 'Environment:Site Day Type Index [](Hourly)'
-view_boxplot(medium_office, column=column, by=by, title='Medium office: '+column)
-view_boxplot(small_office, column=column, by=by, title='Small office: '+column)
-view_boxplot(restaurant, column=column, by=by, title='Restaurant: '+column)
-view_boxplot(retail, column=column, by=by, title='Retail: '+column)
-
+view_boxplot(medium_office, column=column, by=by, title='Medium office: ' + column)
+view_boxplot(small_office, column=column, by=by, title='Small office: ' + column)
+view_boxplot(restaurant, column=column, by=by, title='Restaurant: ' + column)
+view_boxplot(retail, column=column, by=by, title='Retail: ' + column)
 
 
 # BINARY PLOT - OCCUPATION
@@ -219,22 +245,25 @@ def binary_plot(df, col, title):
     # plt.savefig('def_code/immagini/binary_occupation/+'+title+'.png')
     plt.show()
 
+
 binary_plot(medium_office, 'Total People', title='medium_office_binary_plot')
 binary_plot(small_office, 'Total People', title='medium_office_binary_plot')
 
-
 # FREQUENCY - TOTAL COOLING RATE
-weekday = pd.DataFrame({'medium': medium_office['Total Cooling Rate [W]'].groupby(medium_office['Environment:Site Day Type Index [](Hourly)']).mean(),
-                       'small': small_office['Total Cooling Rate [W]'].groupby(small_office['Environment:Site Day Type Index [](Hourly)']).mean()})
+weekday = pd.DataFrame({'medium': medium_office['Total Cooling Rate [W]'].groupby(
+    medium_office['Environment:Site Day Type Index [](Hourly)']).mean(),
+                        'small': small_office['Total Cooling Rate [W]'].groupby(
+                            small_office['Environment:Site Day Type Index [](Hourly)']).mean()})
 weekday.index = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
 
 plt.bar(x=weekday.index, height=weekday['medium'], color='b', label='Medium office')
 plt.bar(x=weekday.index, height=weekday['small'], color='r', label='Small office')
 plt.title('Total cooling rate [W]')
 plt.yticks(np.arange(0, 1.1, 0.1))
+plt.grid()
 plt.legend()
+plt.savefig('def_code/immagini/cooling_rate_frequency.png')
 plt.show()
-
 
 """
 # DENSITY (COOLING RATE)
@@ -255,22 +284,6 @@ plt.title('Cooling rate density distribution', size=15)
 plt.legend()
 plt.show()
 """
-
-# ___________________________________________________Normalization______________________________________________________
-
-maxT_m = medium_office['Mean air Temperature [°C]'].max()
-minT_m = medium_office['Mean air Temperature [°C]'].min()
-maxT_s = small_office['Mean air Temperature [°C]'].max()
-minT_s = small_office['Mean air Temperature [°C]'].min()
-
-def normalization(df):
-    df = (df - df.min()) / (df.max() - df.min())
-    return df
-
-medium_office = normalization(medium_office)
-small_office = normalization(small_office)
-restaurant = normalization(restaurant)
-retail = normalization(retail)
 
 # ______________________________________Datasets_preprocessing__________________________________________________________
 # shifting_period = 1
