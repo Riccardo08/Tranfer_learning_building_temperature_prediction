@@ -194,9 +194,9 @@ class MV_LSTM(torch.nn.Module):
         self.l_linear = torch.nn.Sequential(
             nn.Linear(self.n_hidden, 10),
             nn.ReLU(),
-            nn.Linear(10, 5),
-            nn.ReLU(),
-            nn.Linear(5, 1)
+            nn.Linear(10, 1)
+            # nn.ReLU(),
+            # nn.Linear(5, 1)
         )
     def forward(self, x, h):
         batch_size, seq_len, _ = x.size()
@@ -292,12 +292,12 @@ plt.show()
 
 # _____________________________________________________SAVE THE MODEL ____________________________________________________
 
-"""
+
 torch.save(lstm.state_dict(), 'def_code/lstm_total_small_office.pth')
 model = MV_LSTM(n_features, n_timesteps)
 model.load_state_dict(torch.load('def_code/lstm_total_small_office.pth'))
 model.eval()
-"""
+
 
 
 # ______________________________________________ 1h PREDICTION TESTING _____________________________________________
