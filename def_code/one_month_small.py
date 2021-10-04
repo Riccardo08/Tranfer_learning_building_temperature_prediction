@@ -50,8 +50,8 @@ def read_csv(directory, file_csv):
 # from new_datasets_LSTM import read_csv
 
 # Small_office
-small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
-# small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
+#small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
+small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 # small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 # small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
 
@@ -59,7 +59,7 @@ small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
 'Environment:Site Day Type Index [](Hourly)', 'Total Cooling Rate [W]', 'Total People', 'Mean air Temperature [°C]']
 
-one_month_small = small_office_100[0:1080][columns]
+one_month_small = small_office_100_random_potenza_60_perc[0:720][columns]
 
 maxT_small_1m = one_month_small['Mean air Temperature [°C]'].max()
 minT_small_1m = one_month_small['Mean air Temperature [°C]'].min()
@@ -185,9 +185,9 @@ class MV_LSTM(torch.nn.Module):
         self.l_linear = torch.nn.Sequential(
             nn.Linear(self.n_hidden, 10),
             nn.ReLU(),
-            nn.Linear(10, 5),
-            nn.ReLU(),
-            nn.Linear(5, 1)
+            nn.Linear(10, 1)
+            #nn.ReLU(),
+            #nn.Linear(5, 1)
         )
     def forward(self, x, h):
         batch_size, seq_len, _ = x.size()
@@ -263,7 +263,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_small_1m = 200
+epochs_small_1m = 150
 train_loss_small_1m, val_loss_small_1m = train_model(lstm, epochs=epochs_small_1m, train_dl=train_dl_small_1m, val_dl=val_dl_small_1m, optimizer=optimizer_small_1m, criterion=criterion_small_1m)
 
 
@@ -278,12 +278,22 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
 plt.show()
+
+# _____________________________________________________SAVE THE MODEL ____________________________________________________
+
+
+torch.save(lstm.state_dict(), 'def_code/lstm_one_month_small_office.pth')
+model = MV_LSTM(n_features, n_timesteps)
+model.load_state_dict(torch.load('def_code/lstm_one_month_small_office.pth'))
+model.eval()
+
+
 
 
 # ______________________________________________ 1h PREDICTION TESTING _____________________________________________
-test_batch_size = 50
+test_batch_size = 20
 test_data_small_1m = TensorDataset(test_small_1mX, test_small_1mY)
 test_dl_small_1m = DataLoader(test_data_small_1m, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses = []
@@ -317,7 +327,7 @@ def test_model(model, test_dl, maxT, minT):
 
 # from new_datasets_LSTM import test_model
 
-y_pred_small_1m, y_lab_small_1m = test_model(lstm, test_dl_small_1m, maxT_small_1m, minT_small_1m)
+y_pred_small_1m, y_lab_small_1m = test_model(model, test_dl_small_1m, maxT_small_1m, minT_small_1m)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_small_1m = flatten(y_pred_small_1m)
@@ -335,7 +345,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -344,12 +354,12 @@ plt.plot(y_lab_small_1m, color="b", linestyle="dashed", linewidth=1, label="Real
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
-plt.xlim(left=0, right=90)
+plt.xlim(left=0, right=168)
 plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -369,13 +379,14 @@ print('R2:', R2.item())
 
 
 plt.scatter(y_lab_small_1m, y_pred_small_1m,  color='k', edgecolor= 'white', linewidth=1) #,alpha=0.1
+plt.text(25.5, 28.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/one_month_small/1,5_months/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
