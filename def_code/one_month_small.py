@@ -50,7 +50,7 @@ def read_csv(directory, file_csv):
 # from new_datasets_LSTM import read_csv
 
 # Small_office
-#small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
+# small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
 small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 # small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 # small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
@@ -156,7 +156,7 @@ print(type(test_small_1mY), test_small_1mY.shape)
 # HYPER PARAMETERS
 lookback = 48
 # train_episodes = 25
-lr = 0.005 #0.005 #0.009
+lr = 0.007 #0.005 #0.009
 num_layers = 5
 num_hidden = 15
 batch_size = 100
@@ -165,7 +165,7 @@ train_batch_size = 90
 train_data_small_1m = TensorDataset(train_small_1mX, train_small_1mY)
 train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size, shuffle=True, drop_last=True)
 
-val_batch_size = 25
+val_batch_size = 18
 val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
 val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
 
@@ -263,7 +263,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_small_1m = 150
+epochs_small_1m = 180
 train_loss_small_1m, val_loss_small_1m = train_model(lstm, epochs=epochs_small_1m, train_dl=train_dl_small_1m, val_dl=val_dl_small_1m, optimizer=optimizer_small_1m, criterion=criterion_small_1m)
 
 
@@ -283,17 +283,17 @@ plt.show()
 
 # _____________________________________________________SAVE THE MODEL ____________________________________________________
 
-
+"""
 torch.save(lstm.state_dict(), 'def_code/lstm_one_month_small_office.pth')
 model = MV_LSTM(n_features, n_timesteps)
 model.load_state_dict(torch.load('def_code/lstm_one_month_small_office.pth'))
 model.eval()
-
+"""
 
 
 
 # ______________________________________________ 1h PREDICTION TESTING _____________________________________________
-test_batch_size = 20
+test_batch_size = 23
 test_data_small_1m = TensorDataset(test_small_1mX, test_small_1mY)
 test_dl_small_1m = DataLoader(test_data_small_1m, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses = []
@@ -327,7 +327,7 @@ def test_model(model, test_dl, maxT, minT):
 
 # from new_datasets_LSTM import test_model
 
-y_pred_small_1m, y_lab_small_1m = test_model(model, test_dl_small_1m, maxT_small_1m, minT_small_1m)
+y_pred_small_1m, y_lab_small_1m = test_model(lstm, test_dl_small_1m, maxT_small_1m, minT_small_1m)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_small_1m = flatten(y_pred_small_1m)
