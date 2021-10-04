@@ -91,7 +91,7 @@ medium_office = pd.DataFrame()
 # restaurant = pd.DataFrame()
 # retail = pd.DataFrame()
 
-medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_dataset_validation, medium_office_2_random_2, medium_office_2_100_random_60_perc], columns=columns) # name=medium_office
+medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 # small_office = concat_datasets(list=[small_office_100, small_office_105, small_office_random, small_office_100_random_potenza_60_perc], columns=columns)#  name=small_office
 # restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
 # retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
@@ -554,7 +554,7 @@ def test_model(model, test_dl, maxT, minT, batch_size):
         y_lab.append(labels)
     return y_pred, y_lab
 
-y_pred_m, y_lab_m = test_model(model, test_dl_m, maxT_m, minT_m, test_batch_size)
+y_pred_m, y_lab_m = test_model(lstm, test_dl_m, maxT_m, minT_m, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
@@ -605,7 +605,7 @@ print('R2:', R2.item())
 
 
 plt.scatter(y_lab_m, y_pred_m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
-plt.text(24.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(25.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
@@ -690,7 +690,7 @@ lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
 epochs_s = 120
-train_loss_st_1m, val_loss_st_1m = train_model(model, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
+train_loss_st_1m, val_loss_st_1m = train_model(lstm, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
 
 
 # Plot to verify validation and train loss, in order to avoid underfitting and overfitting
@@ -705,17 +705,17 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
-test_batch_size = 25
+test_batch_size = 20
 test_data_s = TensorDataset(test_small_1mX, test_small_1mY)
 test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, drop_last=True)
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_st_1m, y_lab_st_1m = test_model(model, test_dl_s, maxT_small_1m, minT_small_1m, test_batch_size)
+y_pred_st_1m, y_lab_st_1m = test_model(lstm, test_dl_s, maxT_small_1m, minT_small_1m, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_st_1m = flatten(y_pred_st_1m)
@@ -733,7 +733,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/tuning/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -747,7 +747,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/tuning/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -768,7 +768,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/tuning/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
