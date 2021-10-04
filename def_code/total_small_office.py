@@ -68,7 +68,7 @@ def concat_datasets(list, columns):
     return name
 
 small_office = pd.DataFrame()
-small_office = concat_datasets(list=[small_office_100, small_office_105, small_office_random, small_office_100_random_potenza_60_perc], columns=columns)#  name=small_office
+small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
 
 maxT_s = small_office['Mean air Temperature [°C]'].max()
 minT_s = small_office['Mean air Temperature [°C]'].min()
@@ -335,7 +335,7 @@ def test_model(model, test_dl, maxT, minT):
 
 # from new_datasets_LSTM import test_model
 
-y_pred_s, y_lab_s = test_model(model, test_dl_total_s, maxT_s, minT_s)
+y_pred_s, y_lab_s = test_model(lstm, test_dl_total_s, maxT_s, minT_s)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_s = flatten(y_pred_s)
@@ -386,7 +386,7 @@ print('R2:', R2.item())
 
 
 plt.scatter(y_lab_s, y_pred_s,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
-plt.text(24.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(25.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
