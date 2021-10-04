@@ -50,9 +50,9 @@ def read_csv(directory, file_csv):
 
 # Small_office
 small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
-small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
-small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
 small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
+small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
+small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
 
 # Chaining of the datasets
 columns = ['Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)', 'Environment:Site Direct Solar Radiation Rate per Area [W/m2](Hourly)',
@@ -68,7 +68,7 @@ def concat_datasets(list, columns):
     return name
 
 small_office = pd.DataFrame()
-small_office = concat_datasets(list=[small_office_100, small_office_100_random_potenza_60_perc, small_office_105, small_office_random], columns=columns)#  name=small_office
+small_office = concat_datasets(list=[small_office_100, small_office_105, small_office_random, small_office_100_random_potenza_60_perc], columns=columns)#  name=small_office
 
 maxT_s = small_office['Mean air Temperature [°C]'].max()
 minT_s = small_office['Mean air Temperature [°C]'].min()
@@ -78,7 +78,7 @@ def normalization(df):
     return df
 
 small_office = normalization(small_office)
-
+"""
 def binary_plot(df, col, title):
     plt.plot(df[col])
     plt.xlim(0, 500)
@@ -87,18 +87,19 @@ def binary_plot(df, col, title):
     plt.show()
 
 binary_plot(small_office, 'Total People', title='small_office_binary_plot')
+"""
 
 # ______________________________________Datasets_preprocessing___________________________________________________________
 # shifting_period = 1
 period = 1
-l_train = int(0.8 * len(small_office))
-l_train_m = int(0.8 * l_train)# training length
+l_train = int(0.5 * len(small_office))
+l_val = int(l_train+2928)# training length
 # from new_datasets_LSTM import create_data
 
 def create_data(df, col_name):
-    train_mx = pd.DataFrame(df[:l_train_m])
-    val_mx = pd.DataFrame(df[l_train_m:l_train])
-    test_mx = pd.DataFrame(df[l_train:])
+    train_mx = pd.DataFrame(df[:l_train])
+    val_mx = pd.DataFrame(df[l_train:l_val])
+    test_mx = pd.DataFrame(df[l_val:])
     train_mx['out'] = train_mx[col_name]
     val_mx['out'] = val_mx[col_name]
     test_mx['out'] = test_mx[col_name]
@@ -271,7 +272,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_s= 150
+epochs_s= 100
 train_loss_total_s, val_loss_total_s = train_model(lstm, epochs=epochs_s, train_dl=train_dl_total_s, val_dl=val_dl_total_s, optimizer=optimizer_total_s, criterion=criterion_total_s)
 
 
@@ -286,8 +287,17 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/total_small_office/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/test_random_60_perc/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
+
+# _____________________________________________________SAVE THE MODEL ____________________________________________________
+
+"""
+torch.save(lstm.state_dict(), 'def_code/lstm_total_small_office.pth')
+model = MV_LSTM(n_features, n_timesteps)
+model.load_state_dict(torch.load('def_code/lstm_total_small_office.pth'))
+model.eval()
+"""
 
 
 # ______________________________________________ 1h PREDICTION TESTING _____________________________________________
@@ -325,7 +335,7 @@ def test_model(model, test_dl, maxT, minT):
 
 # from new_datasets_LSTM import test_model
 
-y_pred_s, y_lab_s = test_model(lstm, test_dl_total_s, maxT_s, minT_s)
+y_pred_s, y_lab_s = test_model(model, test_dl_total_s, maxT_s, minT_s)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_s = flatten(y_pred_s)
@@ -343,7 +353,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/total_small_office/LSTM_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/test_random_60_perc/LSTM_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -357,7 +367,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/total_small_office/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/total_small_office/test_random_60_perc/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -376,11 +386,12 @@ print('R2:', R2.item())
 
 
 plt.scatter(y_lab_s, y_pred_s,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
+plt.text(24.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-#plt.savefig('def_code/immagini/total_small_office/LSTM_prediction_distribution({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/total_small_office/test_random_60_perc/LSTM_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
