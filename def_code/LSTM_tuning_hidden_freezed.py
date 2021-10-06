@@ -387,11 +387,11 @@ print(type(test_sY), test_sY.shape)
 lookback = 48
 # train_episodes = 25
 lr = 0.008 #0.005 #0.009
-num_hidden = 10
-num_layers = 3
+num_hidden = 15
+num_layers = 5
 
-num_hidden1 = 10
-num_layers1 = 3
+num_hidden1 = 15
+num_layers1 = 5
 
 # batch_size = 100
 
@@ -426,9 +426,9 @@ class MV_LSTM(torch.nn.Module):
         # self.dropout = torch.nn.Dropout(drop_prob)
         # according to pytorch docs LSTM output isn(batch_size,seq_len, num_directions * hidden_size) when considering batch_first = True
         self.l_linear = torch.nn.Sequential(
-            nn.Linear(10, 7),
+            nn.Linear(15, 10),
             nn.ReLU(),
-            nn.Linear(7, 1)
+            nn.Linear(10, 1)
             # nn.ReLU()
             #nn.Linear(7, 3),
             #nn.ReLU(),
