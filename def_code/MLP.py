@@ -241,10 +241,9 @@ for epoch in range(epochs):
     print("epoch: ", epoch, "validation loss: ", valid_total_loss_m/val_batch_size_m)
 
 """
-# total_correct/len(train_set)
-torch.save(mlp_m.state_dict(), "rete_neurale_m.pth")
+torch.save(mlp_m.state_dict(), "def_code/MLP_20_100x5.pth")
 loadedmodel_m = MLP_m(n_features_m)
-loadedmodel_m.load_state_dict(torch.load("rete_neurale_m.pth"))
+loadedmodel_m.load_state_dict(torch.load("MLP_20_100x5.pth"))
 loadedmodel_m.eval()
 """
 
@@ -256,7 +255,7 @@ plt.grid()
 plt.title('Loss value trend', size=15)
 plt.xlabel('Epochs')
 plt.legend()
-plt.savefig('def_code/immagini/MLP/20_100x5/Loss_value_trend({}_epochs).png'.format(epochs))
+#plt.savefig('def_code/immagini/MLP/20_100x5/Loss_value_trend({}_epochs).png'.format(epochs))
 plt.show()
 
 
@@ -311,7 +310,7 @@ plt.plot(y_pred_m, c='b', label='Predicted')
 plt.xlim(0, 600)
 plt.title('Predictions vs Real trend (Multivariate case)', size=15)
 plt.legend()
-plt.savefig('def_code/immagini/MLP/20_100x5/Predictions_vs_Real_values({}_epochs).png'.format(epochs))
+#plt.savefig('def_code/immagini/MLP/20_100x5/Predictions_vs_Real_values({}_epochs).png'.format(epochs))
 plt.show()
 
 
@@ -321,7 +320,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-plt.savefig('def_code/immagini/MLP/20_100x5/LSTM_model_error({}_epochs).png'.format(epochs))
+#plt.savefig('def_code/immagini/MLP/20_100x5/LSTM_model_error({}_epochs).png'.format(epochs))
 plt.show()
 
 
@@ -333,7 +332,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 
 MAPE = mean_absolute_percentage_error(y_lab_m, y_pred_m)
-MSE = mean_squared_error(y_lab_m, y_pred_m)**0.5
+MSE = mean_squared_error(y_lab_m, y_pred_m)
 R2 = r2_score(y_lab_m, y_pred_m)
 
 print('MAPE:%0.5f%%'%MAPE)
@@ -350,7 +349,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/MLP/20_100x5/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs))
+#plt.savefig('def_code/immagini/MLP/20_100x5/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs))
 plt.show()
 
 
