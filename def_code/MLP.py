@@ -90,12 +90,14 @@ medium_office['Environment:Site Day Type Index [](Hourly)'] = round(medium_offic
 
 # ______________________________________Datasets_preprocessing__________________________________________________________
 period = 1
-l_train = int(0.5 * len(medium_office))
-l_val = int(l_train+2928)
+#l_train = int(0.5 * len(medium_office))
+#l_val = int(l_train+2928)
 # l_test = int(len(medium_office)-l_val)
 # l_train_m = int(0.8 * l_train)# training length
 
 def create_data(df, col_name):
+    l_train = int(0.5 * len(df))
+    l_val = int(l_train + int(len(df)/4))
     train_m = pd.DataFrame(df[:l_train])
     val_m = pd.DataFrame(df[l_train:l_val])
     test_m = pd.DataFrame(df[l_val:])
@@ -207,38 +209,43 @@ mlp_m = MLP_m(n_features_m)
 optimizer = optim.Adam(mlp_m.parameters(), lr=0.008)
 
 
-train_loss_m = []
-val_loss_m = []
-epochs = 100
+def train_model(model, epochs, train_dl, val_dl, optimizer, mode=''):
+    model.train()
+    train_loss = []
+    val_loss = []
+    # Training with multiple epochs
+    for epoch in range(epochs):
+        # ________________TRAINING_______________________________
+        total_loss = 0
+        for x, y in train_dl: # get batch
+            input = x.reshape(-1, n_features_m)
+            output = model(input.float())
+            loss = F.mse_loss(output.view(-1), y.float()) # calculate the loss
 
-# Training with multiple epochs
-for epoch in range(epochs):
-    # ________________TRAINING_______________________________
-    total_loss = 0
-    for x, y in train_dl_m: # get batch
-        input = x.reshape(-1, n_features_m)
-        output = mlp_m(input.float())
-        loss = F.mse_loss(output.view(-1), y.float()) # calculate the loss
+            loss.backward() # calculate the gradient
+            optimizer.step() # update weight
+            optimizer.zero_grad()
 
-        loss.backward() # calculate the gradient
-        optimizer.step() # update weight
-        optimizer.zero_grad()
+            total_loss += loss.item()
+        train_loss.append(total_loss)
+        # total_correct += get_num_correct(preds, labels)
+        if mode == 'tuning':
+            lr_scheduler.step()
+        print("epoch: ", epoch, "loss: ", total_loss/train_batch_size_m)
 
-        total_loss += loss.item()
-    train_loss_m.append(total_loss)
-    # total_correct += get_num_correct(preds, labels)
-    print("epoch: ", epoch, "loss: ", total_loss/train_batch_size_m)
+        # ________________VALIDATION_____________________________
+        valid_total_loss = 0
+        for n, m in val_dl:
+            input = n.reshape(-1, n_features_m)
+            output = model(input.float())
+            v_loss_m = F.mse_loss(output.view(-1), m.float())  # calculate the loss
+            valid_total_loss += v_loss_m.item()
+        val_loss.append(valid_total_loss)
+        print("epoch: ", epoch, "validation loss: ", valid_total_loss/val_batch_size_m)
+    return train_loss, val_loss
 
-    # ________________VALIDATION__________________________
-    valid_total_loss_m = 0
-    for n, m in val_dl_m:
-        input = n.reshape(-1, n_features_m)
-        output = mlp_m(input.float())
-        v_loss_m = F.mse_loss(output.view(-1), m.float())  # calculate the loss
-
-        valid_total_loss_m += v_loss_m.item()
-    val_loss_m.append(valid_total_loss_m)
-    print("epoch: ", epoch, "validation loss: ", valid_total_loss_m/val_batch_size_m)
+epochs = 500
+train_loss_m, val_loss_m = train_model(mlp_m, epochs, train_dl_m, val_dl_m, optimizer)
 
 """
 torch.save(mlp_m.state_dict(), "def_code/MLP_20_100x5.pth")
@@ -258,9 +265,9 @@ plt.legend()
 #plt.savefig('def_code/immagini/MLP/20_100x5/Loss_value_trend({}_epochs).png'.format(epochs))
 plt.show()
 
-
 # Evaluate the testing set
-def evaluate_model(test_dl, model, n_features):
+def evaluate_model(model, test_dl, n_features, maxT, minT):
+    model.eval()
     predictions, actuals = list(), list()
     # test_loss = []
     for x, targets in test_dl:
@@ -278,28 +285,28 @@ def evaluate_model(test_dl, model, n_features):
         # store
         total_loss += loss.item()
         #test_loss.append(total_loss)
-        predictions.append(yhat.item())
-        actuals.append(targets.item())
+        yhat = minT + yhat*(maxT-minT)
+        targets = minT + targets*(maxT-minT)
+        predictions.append(yhat)
+        actuals.append(targets)
 
     return predictions, actuals
 
 
-y_pred_m, y_lab_m = evaluate_model(test_dl_m, mlp_m, n_features=n_features_m)
+y_pred_m, y_lab_m = evaluate_model(mlp_m, test_dl_m, n_features=n_features_m, maxT=maxT_m, minT=minT_m)
 y_pred_m = np.array(y_pred_m)
 y_lab_m = np.array(y_lab_m)
 
-y_pred_m = normalization(y_pred_m, mode='T_denorm')
-y_lab_m = normalization(y_lab_m, mode='T_denorm')
+# y_pred_m = normalization(y_pred_m, mode='T_denorm')
+# y_lab_m = normalization(y_lab_m, mode='T_denorm')
 
 """
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_m = flatten(y_pred_m)
 y_lab_m = flatten(y_lab_m)
-"""
-
 y_pred_m = np.array(y_pred_m, dtype=float)
 y_lab_m = np.array(y_lab_m, dtype=float)
-
+"""
 
 error_m = []
 error_m = y_pred_m - y_lab_m
@@ -350,6 +357,216 @@ plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
 #plt.savefig('def_code/immagini/MLP/20_100x5/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs))
+plt.show()
+
+
+
+# _____________________________________________________TUNING_PHASE_____________________________________________________
+"""
+def freeze_params(model):
+    for param_c in model.l_lstm1.parameters():
+            param_c.requires_grad = False
+    #for param_fc in model.l_linear.parameters():
+    #        param_fc.requires_grad = False
+    return model
+
+# for param_c in mv_net.l_lstm.parameters():
+#     print(param_c)
+lstm_test = freeze_params(lstm)
+#lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
+# lstm_tun = freeze_params(lstm_prova)
+print(lstm_test)
+for i in lstm_test.l_lstm1.parameters():
+    print(i)
+for x in lstm_test.l_linear.parameters():
+    print(x)
+
+# ______________________________ADD MODULES_____________________________________________________________________________
+
+num_out_ftrs = lstm_test.l_linear[0].out_features
+
+# lstm_test.l_linear[1] = lstm_test.l_linear.add_module('1', nn.ReLU())
+# lstm_test.l_linear[2] = lstm_test.l_linear.add_module('2', nn.Linear(num_out_ftrs, 1))
+
+# lstm_test.l_linear[1] = nn.ReLU()
+lstm_test.l_linear[1] = nn.ReLU()
+lstm_test.l_linear[2] = nn.Linear(num_out_ftrs, 5)
+lstm_test.l_linear.add_module('3', nn.ReLU())
+lstm_test.l_linear.add_module('4', nn.Linear(5, 1))
+
+# lstm_test.l_linear[3] = nn.ReLU()
+# lstm_test.l_linear[4] = nn.Linear(5, 1)
+
+
+lstm_test.l_linear.add_module('5', nn.ReLU())
+lstm_test.l_linear.add_module('6', nn.Linear(4, 1))
+
+
+print(lstm_test)
+for i in lstm_test.l_lstm.parameters():
+    print(i)
+for x in lstm_test.l_linear.parameters():
+    print(x)
+"""
+
+
+
+# ______________________________Small office___________________________
+
+#small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
+small_office_100_random_potenza_60_perc = read_csv(directory='Small_office', file_csv='Small_office_100_random_potenza_60_perc.csv')
+# small_office_105 = read_csv(directory='small_office', file_csv='Small_office_105.csv')
+# small_office_random = read_csv(directory='small_office', file_csv='Small_office_random.csv')
+
+one_month_small = small_office_100_random_potenza_60_perc[0:720][columns]
+
+maxT_small_1m = one_month_small['Mean air Temperature [°C]'].max()
+minT_small_1m = one_month_small['Mean air Temperature [°C]'].min()
+
+
+def set_binary(df, column):
+    for i in range(0, len(df)):
+        if df[column][i] != 0.00000:
+            df[column][i] = 1.0
+    return df
+
+one_month_small = set_binary(one_month_small, 'Total People')
+
+one_month_small = normalization(one_month_small, 'norm')
+
+
+train_small_1m, val_small_1m, test_small_1m = create_data(df=one_month_small, col_name='Mean air Temperature [°C]')
+train_small_1m, val_small_1m, test_small_1m = train_small_1m.to_numpy(), val_small_1m.to_numpy(), test_small_1m.to_numpy()
+
+
+# Split small office
+train_small_1mX, train_small_1mY = split_sequences(sequences=train_small_1m, n_steps=n_steps)
+val_small_1mX, val_small_1mY = split_sequences(sequences=val_small_1m, n_steps=n_steps)
+test_small_1mX, test_small_1mY = split_sequences(sequences=test_small_1m, n_steps=n_steps)
+
+# Convert small office to tensors
+train_small_1mX = torch.from_numpy(train_small_1mX)
+train_small_1mY = torch.from_numpy(train_small_1mY)
+val_small_1mX = torch.from_numpy(val_small_1mX)
+val_small_1mY = torch.from_numpy(val_small_1mY)
+test_small_1mX = torch.from_numpy(test_small_1mX)
+test_small_1mY = torch.from_numpy(test_small_1mY)
+
+print(type(train_small_1mX), train_small_1mX.shape)
+print(type(train_small_1mY), train_small_1mY.shape)
+print(type(val_small_1mX), val_small_1mX.shape)
+print(type(val_small_1mY), val_small_1mY.shape)
+print(type(test_small_1mX), test_small_1mX.shape)
+print(type(test_small_1mY), test_small_1mY.shape)
+
+
+# __________________________________INCLUDE_NEW_DATASET_________________________________________________________________
+# from new_dataset import train_mX_new, train_mY_new, val_mX_new, val_mY_new, test_mX_new, test_mY_new
+# from one_month_small import train_small_1mX, train_small_1mY, val_small_1mX, val_small_1mY, test_small_1mX, test_small_1mY, maxT_small_1m, minT_small_1m
+
+train_batch_size = 80
+train_data_small_1m = TensorDataset(train_small_1mX, train_small_1mY)
+train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size, shuffle=True, drop_last=True)
+
+val_batch_size = 18
+val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
+val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
+
+
+# generalize the number of features and the number of timesteps by linking them to the preprocessing
+n_features = train_small_1mX.shape[2]
+n_timesteps = n_steps
+
+# initialize the network,criterion and optimizer
+criterion_ft = torch.nn.MSELoss()
+optimizer_ft = torch.optim.SGD(mlp_m.parameters(), lr=0.001)
+#optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
+# Decay LR (learning rate) by a factor of 0.1 every 7 epochs
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+
+# TRAINING TUNING MODEL
+epochs_s = 200
+train_loss_st_1m, val_loss_st_1m = train_model(mlp_m, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, mode='tuning')
+
+
+# Plot to verify validation and train loss, in order to avoid underfitting and overfitting
+plt.plot(train_loss_st_1m, '--', color='r', linewidth=1, label='Train Loss')
+plt.plot(val_loss_st_1m, color='b', linewidth=1, label='Validation Loss')
+plt.ylabel('Loss (MSE)')
+#plt.ylim(0, 0.005)
+plt.xlabel('Epoch')
+plt.xticks(np.arange(0, int(epochs_s), 10))
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.title("Training VS Validation loss", size=15)
+plt.legend()
+#plt.savefig('def_code/immagini/MLP/20_100x5/weights_inizialization/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+plt.show()
+
+# ______________________________________TESTING______________________________
+test_batch_size = 18
+test_data_s = TensorDataset(test_small_1mX, test_small_1mY)
+test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, drop_last=True)
+test_losses_s = []
+# h = lstm.init_hidden(val_batch_size)
+
+y_pred_st_1m, y_lab_st_1m = evaluate_model(mlp_m, test_dl_s, n_features_m, maxT_small_1m, minT_small_1m)
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+y_pred_st_1m = flatten(y_pred_st_1m)
+y_lab_st_1m = flatten(y_lab_st_1m)
+y_pred_st_1m = np.array(y_pred_st_1m, dtype=float)
+y_lab_st_1m = np.array(y_lab_st_1m, dtype = float)
+
+
+error_s = []
+error_s = y_pred_st_1m - y_lab_st_1m
+
+plt.hist(error_s, 100, linewidth=1.5, edgecolor='black', color='orange')
+plt.xticks(np.arange(-1, 0.6, 0.1))
+plt.xlim(-0.6, 0.6)
+plt.title('Tuning model prediction error')
+# plt.xlabel('Error')
+plt.grid(True)
+#plt.savefig('def_code/immagini/MLP/20_100x5/weights_inizialization/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+plt.show()
+
+
+plt.plot(y_pred_st_1m, color='orange', label="Predicted")
+plt.plot(y_lab_st_1m, color="b", linestyle="dashed", linewidth=1, label="Real")
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlim(left=0, right=150)
+plt.ylabel('Mean Air Temperature [°C]')
+plt.xlabel('Time [h]')
+plt.title("Tuning: real VS predicted temperature", size=15)
+plt.legend()
+#plt.savefig('def_code/immagini/MLP/20_100x5/weights_inizialization/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+plt.show()
+
+
+MAPE = mean_absolute_percentage_error(y_lab_st_1m, y_pred_st_1m)
+MSE = mean_squared_error(y_lab_st_1m, y_pred_st_1m)
+R2 = r2_score(y_lab_st_1m, y_pred_st_1m)
+
+print('MAPE:%0.5f%%'%MAPE)
+print('MSE:', MSE.item())
+print('R2:', R2.item())
+
+
+plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1) # ,alpha=0.1
+plt.text(23.2, 28.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(23.2, 29.2, 'MSE: {:.3f}'.format(MSE), fontsize=15, bbox=dict(facecolor='green', alpha=0.5))
+plt.plot([23, 27, 30], [23, 27, 30], color='red')
+plt.grid(b=True, which='major', color='#666666', linestyle='-')
+plt.minorticks_on()
+plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
+plt.xlabel('Real Temperature [°C]')
+plt.ylabel('Predicted Temperature [°C]')
+plt.title("Tuning prediction distribution", size=15)
+#plt.savefig('def_code/immagini/MLP/20_100x5/weights_inizialization/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
