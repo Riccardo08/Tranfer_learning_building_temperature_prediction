@@ -382,7 +382,7 @@ for i in mlp_head.parameters():
 for x in mlp_tail.parameters():
     print(x)
 
-# ______________________________ADD MODULES_____________________________________________________________________________
+# _______________________________________ADD MODULES____________________________________________________________________
 """
 
 num_out_ftrs = lstm_test.l_linear[0].out_features
@@ -479,14 +479,16 @@ n_timesteps = n_steps
 
 # initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
-#optimizer_ft = torch.optim.SGD(mlp_m.parameters(), lr=0.001)
-optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+# optimizer_ft = torch.optim.SGD(mlp_m.parameters(), lr=0.001)
+optimizer_ft = optim.Adam(mlp_m.parameters(), lr=0.008)
+
+# optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
-epochs_s = 200
-train_loss_st_1m, val_loss_st_1m = train_model(model, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, train_batch_size, val_batch_size, mode='tuning')
+epochs_s = 500
+train_loss_st_1m, val_loss_st_1m = train_model(mlp_m, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, train_batch_size, val_batch_size, mode='')
 
 # Plot to verify validation and train loss, in order to avoid underfitting and overfitting
 plt.plot(train_loss_st_1m, '--', color='r', linewidth=1, label='Train Loss')
@@ -494,13 +496,13 @@ plt.plot(val_loss_st_1m, color='b', linewidth=1, label='Validation Loss')
 plt.ylabel('Loss (MSE)')
 #plt.ylim(0, 0.005)
 plt.xlabel('Epoch')
-plt.xticks(np.arange(0, int(epochs_s), 10))
+plt.xticks(np.arange(0, int(epochs_s), 30))
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/MLP/20_100x5/tuning/head/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/MLP/20_100x5/train_on_one_month_small/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
@@ -510,7 +512,7 @@ test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, d
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_st_1m, y_lab_st_1m = evaluate_model(model, test_dl_s, n_features_m, maxT_small_1m, minT_small_1m)
+y_pred_st_1m, y_lab_st_1m = evaluate_model(mlp_m, test_dl_s, n_features_m, maxT_small_1m, minT_small_1m)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_st_1m = flatten(y_pred_st_1m)
@@ -528,7 +530,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/MLP/20_100x5/tuning/head/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/MLP/20_100x5/train_on_one_month_small/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -542,7 +544,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/MLP/20_100x5/tuning/head/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/MLP/20_100x5/train_on_one_month_small/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -565,7 +567,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-#plt.savefig('def_code/immagini/MLP/20_100x5/tuning/head/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/MLP/20_100x5/train_on_one_month_small/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
