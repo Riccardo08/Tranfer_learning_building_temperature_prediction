@@ -91,7 +91,19 @@ medium_office = pd.DataFrame()
 # restaurant = pd.DataFrame()
 # retail = pd.DataFrame()
 
-medium_office = concat_datasets(list=[medium_office_2_100, medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
+
+plt.plot(medium_office_2_random_2['Mean air Temperature [°C]'][:500], label='Random_1', zorder=10)
+plt.plot(medium_office_2_100_random_60_perc['Mean air Temperature [°C]'][:500], label='Random_2')
+plt.grid()
+plt.title('Temperature trend [°C]', size=15)
+plt.xlabel('Time step')
+plt.legend()
+#plt.savefig('def_code/immagini/temperature_trend_')
+plt.show()
+
+
+
+medium_office = concat_datasets(list=[medium_office_2_100,medium_office_2_100_random_60_perc, medium_office_2_dataset_validation, medium_office_2_random_2], columns=columns) # name=medium_office
 # small_office = concat_datasets(list=[small_office_100, small_office_105, small_office_random, small_office_100_random_potenza_60_perc], columns=columns)#  name=small_office
 # restaurant = concat_datasets(list=[restaurant_100, restaurant_100_potenza_random_60_percento, restaurant_dataset_validation, restaurant_random], columns=columns)
 # retail = concat_datasets(list=[retail_100, retail_100_potenza_random_60_percento, retail_105, retail_random], columns=columns)
@@ -295,6 +307,8 @@ l_val = int(l_train+2928)
 #l_train_m = int(0.8 * l_train)# training length
 
 def create_data(df, col_name):
+    # l_train = int(0.5 * len(df))
+    # l_val = int(l_train + int(len(df) / 4))
     train_mx = pd.DataFrame(df[:l_train])
     val_mx = pd.DataFrame(df[l_train:l_val])
     # val_mx = pd.DataFrame(df[l_train_m:l_train])
@@ -441,6 +455,7 @@ class MV_LSTM(torch.nn.Module):
         return hidden
 
 
+
 # Create NN
 #generalize the number of features and the number of timesteps by linking them to the preprocessing
 n_features = train_mX.shape[2]
@@ -509,20 +524,17 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
 plt.show()
 
-# _____________________________________________________SAVE THE MODEL ____________________________________________________
+# _____________________________________________________SAVE THE MODEL __________________________________________________
 
-"""
-torch.save(lstm.state_dict(), 'def_code/lstm_medium_office.pth')
-model = MV_LSTM(n_features, n_timesteps)
-model.load_state_dict(torch.load('def_code/lstm_medium_office.pth'))
-model.eval()
-"""
+#torch.save(lstm.state_dict(), 'def_code/lstm_test_on_2_random_2.pth')
+# model = MV_LSTM(n_features, n_timesteps)
+# model.load_state_dict(torch.load('def_code/lstm_medium_office.pth'))
+# model.eval()
 
-
-# __________________________________________________1h PREDICTION TESTING__________________________________________
+# __________________________________________________1h PREDICTION TESTING_______________________________________________
 test_batch_size = 200
 test_data_m = TensorDataset(test_mX, test_mY)
 test_dl_m = DataLoader(test_data_m, shuffle=False, batch_size=test_batch_size, drop_last=True)
@@ -572,7 +584,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/LSTM/test_random_60_perc/LSTM_model_error({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/LSTM_model_error({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -586,7 +598,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/LSTM/test_random_60_perc/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
@@ -596,33 +608,35 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 MAPE = mean_absolute_percentage_error(y_lab_m, y_pred_m)
-RMSE = mean_squared_error(y_lab_m,y_pred_m)**0.5
+MSE = mean_squared_error(y_lab_m,y_pred_m)
 R2 = r2_score(y_lab_m,y_pred_m)
 
 print('MAPE:%0.5f%%'%MAPE)
-print('RMSE:', RMSE.item())
+print('MSE:', MSE.item())
 print('R2:', R2.item())
 
 
-plt.scatter(y_lab_m, y_pred_m,  color='k', edgecolor= 'white', linewidth=1,alpha=0.1)
-plt.text(25.5, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.scatter(y_lab_m, y_pred_m,  color='k', edgecolor= 'white', linewidth=1, alpha=0.5)
+plt.text(25.2, 29.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(25.2, 30.2, 'MSE: {:.3f}'.format(MSE), fontsize=15, bbox=dict(facecolor='green', alpha=0.5))
+plt.plot([25, 28, 31], [25, 28, 31], color='red')
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/test_random_60_perc/LSTM_prediction_distribution({}_epochs).png'.format(epochs_m))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/LSTM_prediction_distribution({}_epochs).png'.format(epochs_m))
 plt.show()
 
 
 # _____________________________________________________TUNING_PHASE_____________________________________________________
 """
 def freeze_params(model):
-    for param_c in model.l_lstm.parameters():
+    for param_c in model.l_lstm1.parameters():
             param_c.requires_grad = False
-    for param_fc in model.l_linear.parameters():
-            param_fc.requires_grad = False
+    #for param_fc in model.l_linear.parameters():
+    #        param_fc.requires_grad = False
     return model
 
 # for param_c in mv_net.l_lstm.parameters():
@@ -631,7 +645,7 @@ lstm_test = freeze_params(lstm)
 #lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
 # lstm_tun = freeze_params(lstm_prova)
 print(lstm_test)
-for i in lstm_test.l_lstm.parameters():
+for i in lstm_test.l_lstm1.parameters():
     print(i)
 for x in lstm_test.l_linear.parameters():
     print(x)
@@ -684,13 +698,13 @@ n_timesteps = lookback
 # initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
 optimizer_ft = torch.optim.SGD(lstm.parameters(), lr=0.001)
-# optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
+#optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
-lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+# lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
 epochs_s = 120
-train_loss_st_1m, val_loss_st_1m = train_model(lstm, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
+train_loss_st_1m, val_loss_st_1m = train_model(lstm, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='')
 
 
 # Plot to verify validation and train loss, in order to avoid underfitting and overfitting
@@ -705,7 +719,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
@@ -733,7 +747,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -747,28 +761,30 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
 MAPE = mean_absolute_percentage_error(y_lab_st_1m, y_pred_st_1m)
-RMSE = mean_squared_error(y_lab_st_1m, y_pred_st_1m)**0.5
+MSE = mean_squared_error(y_lab_st_1m, y_pred_st_1m)
 R2 = r2_score(y_lab_st_1m, y_pred_st_1m)
 
 print('MAPE:%0.5f%%'%MAPE)
-print('RMSE:', RMSE.item())
+print('MSE:', MSE.item())
 print('R2:', R2.item())
 
 
-plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1) # ,alpha=0.1
+plt.scatter(y_lab_st_1m, y_pred_st_1m,  color='k', edgecolor= 'white', linewidth=1, alpha=0.8)
 plt.text(25.2, 28.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(25.2, 29.2, 'MSE: {:.3f}'.format(MSE), fontsize=15, bbox=dict(facecolor='green', alpha=0.5))
+plt.plot([25, 28, 30], [25, 28, 30], color='red')
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/tuning_on_one_month_small_office/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+# plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
