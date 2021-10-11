@@ -263,7 +263,7 @@ def train_model(model, epochs, train_dl, val_dl, optimizer, criterion, mode=''):
 
     return TRAIN_LOSS, VAL_LOSS
 
-epochs_small_1m = 180
+epochs_small_1m = 150
 train_loss_small_1m, val_loss_small_1m = train_model(lstm, epochs=epochs_small_1m, train_dl=train_dl_small_1m, val_dl=val_dl_small_1m, optimizer=optimizer_small_1m, criterion=criterion_small_1m)
 
 
@@ -278,7 +278,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/LSTM/one_month_small_office/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 # _____________________________________________________SAVE THE MODEL ____________________________________________________
@@ -345,7 +345,7 @@ plt.xlim(-0.4, 0.4)
 plt.title('LSTM model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/LSTM/one_month_small_office/LSTM_model_error({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -359,7 +359,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Real VS predicted temperature", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
+#plt.savefig('def_code/immagini/LSTM/one_month_small_office/LSTM_real_VS_predicted_temperature({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
@@ -370,23 +370,25 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 
 MAPE = mean_absolute_percentage_error(y_lab_small_1m, y_pred_small_1m)
-RMSE = mean_squared_error(y_lab_small_1m, y_pred_small_1m)**0.5
+MSE = mean_squared_error(y_lab_small_1m, y_pred_small_1m)
 R2 = r2_score(y_lab_small_1m, y_pred_small_1m)
 
 print('MAPE:%0.5f%%' %MAPE)
-print('RMSE:', RMSE.item())
+print('MSE:', MSE.item())
 print('R2:', R2.item())
 
 
 plt.scatter(y_lab_small_1m, y_pred_small_1m,  color='k', edgecolor= 'white', linewidth=1) #,alpha=0.1
-plt.text(25.5, 28.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(24.2, 28.2, 'MAPE: {:.3f}'.format(MAPE), fontsize=15, bbox=dict(facecolor='red', alpha=0.5))
+plt.text(24.2, 29.2, 'MSE: {:.3f}'.format(MSE), fontsize=15, bbox=dict(facecolor='green', alpha=0.5))
+plt.plot([24, 27, 30], [24, 27, 30], color='red')
 plt.grid(b=True, which='major', color='#666666', linestyle='-')
 plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Prediction distribution", size=15)
-# plt.savefig('def_code/immagini/one_month_small/test_random_60_perc/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
+# plt.savefig('def_code/immagini/LSTM/one_month_small_office/LSTM_prediction_distribution({}_epochs).png'.format(epochs_small_1m))
 plt.show()
 
 
