@@ -430,10 +430,6 @@ class MV_LSTM(torch.nn.Module):
             nn.Linear(self.n_hidden, 10),
             nn.ReLU(),
             nn.Linear(10, 1)
-            # nn.ReLU()
-            #nn.Linear(7, 3),
-            #nn.ReLU(),
-            #nn.Linear(3, 1)
         )
     def forward(self, x, h):
         batch_size, seq_len, _ = x.size()
@@ -527,12 +523,6 @@ plt.legend()
 #plt.savefig('def_code/immagini/LSTM/test_2_random_2/LSTM_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_m))
 plt.show()
 
-# _____________________________________________________SAVE THE MODEL __________________________________________________
-
-#torch.save(lstm.state_dict(), 'def_code/lstm_test_on_2_random_2.pth')
-# model = MV_LSTM(n_features, n_timesteps)
-# model.load_state_dict(torch.load('def_code/lstm_medium_office.pth'))
-# model.eval()
 
 # __________________________________________________1h PREDICTION TESTING_______________________________________________
 test_batch_size = 200
@@ -630,10 +620,17 @@ plt.title("Prediction distribution", size=15)
 plt.show()
 
 
+# _____________________________________________________SAVE THE MODEL __________________________________________________
+
+#torch.save(lstm.state_dict(), 'def_code/lstm_test_on_2_random_2.pth')
+model = MV_LSTM(n_features, n_timesteps)
+model.load_state_dict(torch.load('def_code/lstm_test_on_60_perc.pth'))
+model.eval()
+
 # _____________________________________________________TUNING_PHASE_____________________________________________________
-"""
+
 def freeze_params(model):
-    for param_c in model.l_lstm1.parameters():
+    for param_c in model.l_lstm.parameters():
             param_c.requires_grad = False
     #for param_fc in model.l_linear.parameters():
     #        param_fc.requires_grad = False
@@ -641,17 +638,17 @@ def freeze_params(model):
 
 # for param_c in mv_net.l_lstm.parameters():
 #     print(param_c)
-lstm_test = freeze_params(lstm)
+lstm_test = freeze_params(model)
 #lstm_test.l_linear = nn.Sequential(*list(lstm_test.l_linear.children())[:-2])
 # lstm_tun = freeze_params(lstm_prova)
 print(lstm_test)
-for i in lstm_test.l_lstm1.parameters():
+for i in lstm_test.l_lstm.parameters():
     print(i)
 for x in lstm_test.l_linear.parameters():
     print(x)
 
 # ______________________________ADD MODULES_____________________________________________________________________________
-
+"""
 num_out_ftrs = lstm_test.l_linear[0].out_features
 
 # lstm_test.l_linear[1] = lstm_test.l_linear.add_module('1', nn.ReLU())
@@ -697,14 +694,14 @@ n_timesteps = lookback
 
 # initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
-optimizer_ft = torch.optim.SGD(lstm.parameters(), lr=0.001)
-#optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
+#optimizer_ft = torch.optim.SGD(model.parameters(), lr=0.001)
+optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
-# lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
+lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
 
 # TRAINING TUNING MODEL
-epochs_s = 120
-train_loss_st_1m, val_loss_st_1m = train_model(lstm, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='')
+epochs_s = 150
+train_loss_st_1m, val_loss_st_1m = train_model(lstm_test, epochs_s, train_dl_small_1m, val_dl_small_1m, optimizer_ft, criterion_ft, mode='tuning')
 
 
 # Plot to verify validation and train loss, in order to avoid underfitting and overfitting
@@ -719,7 +716,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
@@ -729,7 +726,7 @@ test_dl_s = DataLoader(test_data_s, shuffle=False, batch_size=test_batch_size, d
 test_losses_s = []
 # h = lstm.init_hidden(val_batch_size)
 
-y_pred_st_1m, y_lab_st_1m = test_model(lstm, test_dl_s, maxT_small_1m, minT_small_1m, test_batch_size)
+y_pred_st_1m, y_lab_st_1m = test_model(lstm_test, test_dl_s, maxT_small_1m, minT_small_1m, test_batch_size)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 y_pred_st_1m = flatten(y_pred_st_1m)
@@ -747,7 +744,7 @@ plt.xlim(-0.6, 0.6)
 plt.title('Tuning model prediction error')
 # plt.xlabel('Error')
 plt.grid(True)
-#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/tuning/LSTM_tuning_model_error({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -761,7 +758,7 @@ plt.ylabel('Mean Air Temperature [°C]')
 plt.xlabel('Time [h]')
 plt.title("Tuning: real VS predicted temperature", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/tuning/LSTM_tuning_real_VS_predicted_temperature({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
@@ -784,7 +781,7 @@ plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.xlabel('Real Temperature [°C]')
 plt.ylabel('Predicted Temperature [°C]')
 plt.title("Tuning prediction distribution", size=15)
-# plt.savefig('def_code/immagini/LSTM/test_2_random_2/weights_initialization/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_2_random_2/tuning/LSTM_tuning_prediction_distribution({}_epochs).png'.format(epochs_s))
 plt.show()
 
 
