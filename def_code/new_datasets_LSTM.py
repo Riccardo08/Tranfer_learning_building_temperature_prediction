@@ -51,6 +51,8 @@ medium_office_2_100 = read_csv(directory='medium_office', file_csv='Medium_offic
 medium_office_2_dataset_validation = read_csv(directory='medium_office', file_csv='Medium_office_2_dataset_validation.csv')
 medium_office_2_random_2 = read_csv(directory='medium_office', file_csv='Medium_office_2_random_2.csv')
 medium_office_2_100_random_60_perc = read_csv(directory='medium_office', file_csv='Medium_office_2_100_random_60_perc.csv')
+
+
 """
 # Small_office
 small_office_100 = read_csv(directory='small_office', file_csv='Small_office_100.csv')
@@ -686,7 +688,6 @@ train_dl_small_1m = DataLoader(train_data_small_1m, batch_size=train_batch_size,
 val_batch_size = 18
 val_data_small_1m = TensorDataset(val_small_1mX, val_small_1mY)
 val_dl_small_1m = DataLoader(val_data_small_1m, batch_size=val_batch_size, shuffle=True, drop_last=True)
-
 
 # generalize the number of features and the number of timesteps by linking them to the preprocessing
 n_features = train_small_1mX.shape[2]
