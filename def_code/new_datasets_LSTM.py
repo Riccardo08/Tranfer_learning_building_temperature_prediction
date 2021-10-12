@@ -624,9 +624,11 @@ plt.show()
 
 # _____________________________________________________SAVE THE MODEL __________________________________________________
 
-#torch.save(lstm.state_dict(), 'def_code/lstm_test_on_2_random_2.pth')
+#torch.save(lstm.state_dict(), 'def_code/lstm_test_on_2_random_2_prova.pth')
+
+"""
 model = MV_LSTM(n_features, n_timesteps)
-model.load_state_dict(torch.load('def_code/lstm_test_on_60_perc.pth'))
+model.load_state_dict(torch.load('def_code/lstm_test_on_2_random_2.pth'))
 model.eval()
 
 # _____________________________________________________TUNING_PHASE_____________________________________________________
@@ -650,7 +652,7 @@ for x in lstm_test.l_linear.parameters():
     print(x)
 
 # ______________________________ADD MODULES_____________________________________________________________________________
-"""
+
 num_out_ftrs = lstm_test.l_linear[0].out_features
 
 # lstm_test.l_linear[1] = lstm_test.l_linear.add_module('1', nn.ReLU())
@@ -695,7 +697,7 @@ n_timesteps = lookback
 
 # initialize the network,criterion and optimizer
 criterion_ft = torch.nn.MSELoss()
-#optimizer_ft = torch.optim.SGD(model.parameters(), lr=0.001)
+#optimizer_ft = torch.optim.SGD(lstm.parameters(), lr=0.001)
 optimizer_ft = torch.optim.SGD(filter(lambda p: p.requires_grad, lstm_test.parameters()), lr=0.001)
 # Decay LR (learning rate) by a factor of 0.1 every 7 epochs
 lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.1)
@@ -717,7 +719,7 @@ plt.minorticks_on()
 plt.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
 plt.title("Training VS Validation loss", size=15)
 plt.legend()
-#plt.savefig('def_code/immagini/LSTM/test_2_random_2/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
+#plt.savefig('def_code/immagini/LSTM/test_random_60_perc/tuning/LSTM_tuning_Train_VS_Val_LOSS({}_epochs).png'.format(epochs_s))
 plt.show()
 
 # ______________________________________TESTING______________________________
